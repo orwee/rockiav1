@@ -31,6 +31,19 @@ def load_image(url):
         st.error(f"Error loading image: {e}")
         return None
 
+def load_avatar_image(url):
+    try:
+        response = requests.get(url)
+        img = Image.open(BytesIO(response.content))
+        return img
+    except Exception as e:
+        st.error(f"Error loading avatar image: {e}")
+        return None
+
+# Cargar avatares
+assistant_avatar = load_avatar_image(LOGO_URL)
+user_avatar = None  
+
 # Create custom sequential color palette for charts
 def create_custom_cmap():
     return mpl.colors.LinearSegmentedColormap.from_list("Rocky", [PRIMARY_COLOR, SECONDARY_COLOR])
@@ -384,10 +397,12 @@ with st.sidebar:
     st.caption("This assistant analyzes your cryptocurrency portfolio and generates visualizations.")
 
 # Display chat history with standard avatars
+# Luego, en la parte donde muestras los mensajes:
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
+    avatar = assistant_avatar if msg["role"] == "assistant" else user_avatar
+    with st.chat_message(msg["role"], avatar=avatar):
         st.write(msg["content"])
-
+        
 # Visualization area (if activated)
 if st.session_state.show_visualization['show']:
     viz_type = st.session_state.show_visualization['type']
