@@ -397,8 +397,8 @@ if st.session_state.show_visualization['show']:
             category_hhi = ((cat_data / total_value) ** 2).sum() * 100
 
             # Calcular métricas de diversificación
-            coef_var = (df['usd'].std() / df['usd'].mean() * 100).round(1)  # Coeficiente de variación
-            positions_per_chain = (len(df) / unique_chains).round(1)
+            coef_var = (df['usd'].std() / df['usd'].mean() * 100)  # Coeficiente de variación
+            positions_per_chain = round(len(df) / unique_chains, 1)  # Usar función round en lugar del método
 
             # Crear resumen descriptivo
             st.markdown(f"""
