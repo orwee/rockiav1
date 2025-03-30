@@ -403,9 +403,11 @@ if st.session_state.show_visualization['show']:
             # Distribución por Protocolo
             st.subheader("Distribución por Protocolo")
             protocol_data = df.groupby('protocol')['usd'].sum().sort_values(ascending=False)
-        
+            
             fig, ax = plt.subplots(figsize=(10, 6))
             protocol_data.plot(kind='barh', ax=ax)
+            # Añadir esta línea para invertir el eje Y
+            ax.invert_yaxis()  # Esto hace que el orden sea descendente visualmente
             ax.set_title("USD por Protocolo (Descendente)")
             ax.set_xlabel("USD")
             ax.set_ylabel("Protocolo")
@@ -415,17 +417,19 @@ if st.session_state.show_visualization['show']:
             st.subheader("Ranking de Posiciones")
             positions_df = df.copy()
             positions_df['position_name'] = positions_df['token'] + ' (' + positions_df['protocol'] + ')'
-        
+            
             # Ordenar por USD en forma descendente
             top_positions = positions_df.sort_values('usd', ascending=False)
-        
+            
             if len(top_positions) > 10:
                 top_positions = top_positions.head(10)
-        
+            
             # Gráfico de Posiciones (barras horizontales)
             fig, ax = plt.subplots(figsize=(10, max(6, len(top_positions) * 0.4)))
             positions_plot = top_positions.set_index('position_name')['usd']
             positions_plot.plot(kind='barh', ax=ax)
+            # Añadir esta línea para invertir el eje Y
+            ax.invert_yaxis()  # Esto hace que el orden sea descendente visualmente
             ax.set_title("Top Posiciones por USD")
             ax.set_xlabel("USD")
             ax.set_ylabel("Posición")
