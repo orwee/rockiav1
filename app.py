@@ -19,7 +19,7 @@ SECONDARY_COLOR = "#403680"
 BG_COLOR = "#000000"#"#2B314E"
 ACCENT_COLOR = "#A199DA"
 LOGO_URL = "https://corp.orwee.io/wp-content/uploads/2023/07/cropped-imageonline-co-transparentimage-23-e1689783905238.webp"
-LOGO_USER = "https://static.vecteezy.com/system/resources/previews/019/879/186/non_2x/user-icon-on-transparent-background-free-png.png"
+LOGO_USER = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRMM9iuYpLlg4Z4qGzMITpHX9PmdEERT-GHtv7RXnVa7SXaJ6-pdi48oj792H-zPNBpiG0&usqp=CAU"
 # Función para cargar imágenes desde URL
 @st.cache_data
 def load_image(url):
