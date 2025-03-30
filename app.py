@@ -7,68 +7,176 @@ import random
 from langchain_openai import ChatOpenAI
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
+import os
+import matplotlib as mpl
 
-# Configuración de la página
+# Custom color palette
+PRIMARY_COLOR = "#A199DA"
+SECONDARY_COLOR = "#403680"
+BG_COLOR = "#2B314E"
+ACCENT_COLOR = "#A199DA"
+LOGO_URL = "https://corp.orwee.io/wp-content/uploads/2023/07/cropped-imageonline-co-transparentimage-23-e1689783905238.webp"
+
+# Create custom sequential color palette for charts
+def create_custom_cmap():
+    return mpl.colors.LinearSegmentedColormap.from_list("Rocky", [PRIMARY_COLOR, SECONDARY_COLOR])
+
+# Apply custom branding
+def apply_custom_branding():
+    # Custom CSS with Rocky branding
+    css = f"""
+    <style>
+        /* Main background and text */
+        .stApp {{
+            background-color: {BG_COLOR};
+            color: white;
+        }}
+        
+        /* Header styling */
+        h1, h2, h3, h4, h5, h6 {{
+            font-family: 'IBM Plex Mono', monospace !important;
+            color: {PRIMARY_COLOR};
+        }}
+        
+        /* Streamlit components customization */
+        .stButton > button {{
+            background-color: {SECONDARY_COLOR};
+            color: white;
+            border: none;
+            font-family: 'IBM Plex Mono', monospace;
+        }}
+        
+        .stButton > button:hover {{
+            background-color: {PRIMARY_COLOR};
+        }}
+        
+        /* Sidebar styling */
+        .css-1d391kg, .css-12oz5g7 {{
+            background-color: {BG_COLOR};
+        }}
+        
+        /* Add your logo */
+        .logo-container {{
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }}
+        
+        .logo-container img {{
+            height: 50px;
+            margin-right: 10px;
+        }}
+        
+        .app-title {{
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: bold;
+            font-size: 1.5em;
+            color: {PRIMARY_COLOR};
+        }}
+        
+        /* Import IBM Plex Mono font */
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
+        
+        /* Metrics and key figures */
+        .metric-value {{
+            color: {PRIMARY_COLOR};
+            font-weight: bold;
+        }}
+        
+        /* Custom chart background */
+        .chart-container {{
+            background-color: rgba(43, 49, 78, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid {PRIMARY_COLOR};
+        }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+    
+    # Logo and title
+    st.markdown(
+        f"""
+        <div class="logo-container">
+            <img src="{LOGO_URL}" alt="Rocky Logo">
+            <div class="app-title">Rocky - DeFi Portfolio Intelligence</div>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+
+# Page configuration
 st.set_page_config(
-    page_title="Asistente de Portafolio Cripto",
-    page_icon="🤖",
+    page_title="Rocky - DeFi Portfolio",
+    page_icon="🚀",
     layout="wide"
 )
 
-# Inicializar estados de sesión
+# Apply branding
+apply_custom_branding()
+
+# Initialize session states
 if 'messages' not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hola 👋 Soy tu asistente de análisis de portafolio cripto. ¿En qué puedo ayudarte hoy?"}
+        {"role": "assistant", "content": "Hello 👋 I'm your DeFi portfolio assistant. How can I help you today?"}
     ]
-
-if 'OPENAI_API_KEY' not in st.session_state:
-    st.session_state.openai_api_key = None
 
 if 'show_visualization' not in st.session_state:
     st.session_state.show_visualization = {
         'show': False,
-        'type': None,      # puede ser 'dashboard', 'specific', 'positions'
-        'group_by': None   # wallet, chain, etc. (None para dashboard)
+        'type': None,      # can be 'dashboard', 'specific', 'positions'
+        'group_by': None   # wallet, chain, etc. (None for dashboard)
     }
 
-# Respuestas conversacionales para cada tipo de consulta rápida
+# Bilingual keyword mapping
+BILINGUAL_KEYWORDS = {
+    'wallet': ['wallet', 'billetera', 'cartera', 'wallets'],
+    'chain': ['chain', 'blockchain', 'cadena', 'blockchains', 'chains'],
+    'category': ['category', 'categoría', 'categoria', 'tipo', 'categories'],
+    'protocol': ['protocol', 'protocolo', 'protocols'],
+    'dashboard': ['dashboard', 'tablero', 'completo', 'general', 'overview', 'summary'],
+    'positions': ['positions', 'posiciones', 'activos', 'assets', 'holdings'],
+    'total': ['total', 'valor', 'value', 'balance', 'worth']
+}
+
+# Conversational responses for each query type
 def get_conversational_response(query_type):
     responses = {
         'wallet': [
-            "Aquí tienes la distribución de tus fondos por wallet. Se observa una interesante concentración en algunos wallets:",
-            "Analizando tus wallets... Esto es interesante. Te muestro cómo están distribuidos tus fondos entre diferentes wallets:",
-            "He revisado tus datos y aquí te presento la distribución por wallet. Hay patrones claros de concentración."
+            "Here's the distribution of your funds by wallet. There's an interesting concentration pattern:",
+            "Analyzing your wallets... This is interesting. Here's how your funds are distributed across different wallets:",
+            "I've reviewed your data and here's the wallet distribution. There are clear concentration patterns."
         ],
         'chain': [
-            "He analizado tu exposición a diferentes blockchains. Aquí tienes el detalle de cómo están distribuidos tus fondos:",
-            "Análisis de diversificación blockchain: Estos datos muestran en qué cadenas tienes invertido actualmente y cómo se distribuye el valor:",
-            "Aquí está el análisis por blockchain. Es interesante ver la distribución entre diferentes ecosistemas:"
+            "I've analyzed your exposure to different blockchains. Here's a breakdown of how your funds are distributed:",
+            "Blockchain diversification analysis: This data shows which chains you're currently invested in and how value is distributed:",
+            "Here's the blockchain analysis. It's interesting to see the distribution across different ecosystems:"
         ],
         'category': [
-            "He categorizado tus tokens y aquí tienes la distribución. Esto muestra tu balance entre stablecoins, bluechips y altcoins:",
-            "Veamos la distribución por categoría de tokens... Esto es interesante. La proporción entre activos de diferente naturaleza es notable:",
-            "Aquí tienes el análisis por categoría. La distribución refleja ciertos patrones de inversión:"
+            "I've categorized your tokens and here's the distribution. This shows your balance between stablecoins, bluechips, and altcoins:",
+            "Let's look at the distribution by token category... This is interesting. The proportion between different asset types is notable:",
+            "Here's the category analysis. The distribution reflects certain investment patterns:"
         ],
         'dashboard': [
-            "Aquí tienes un dashboard con las principales métricas y visualizaciones de tu portafolio:",
-            "Un panorama general siempre es útil. He generado este dashboard con diferentes perspectivas de tu portafolio para visualizar las distribuciones:",
-            "Presentando un resumen completo de tu portafolio con diferentes visualizaciones para entender mejor la posición actual:"
+            "Here's a dashboard with the main metrics and visualizations of your portfolio:",
+            "An overview is always useful. I've generated this dashboard with different perspectives of your portfolio to visualize the distributions:",
+            "Presenting a complete summary of your portfolio with different visualizations to better understand the current position:"
         ],
         'total': [
-            "He calculado el valor total de tu portafolio. Actualmente tienes invertido:",
-            "Según mis cálculos, el valor total de tu portafolio en este momento es:",
-            "Revisando tus posiciones, el valor total de tu portafolio es:"
+            "I've calculated the total value of your portfolio. You currently have invested:",
+            "According to my calculations, the total value of your portfolio at this moment is:",
+            "Reviewing your positions, the total value of your portfolio is:"
         ],
         'positions': [
-            "Aquí tienes el detalle de todas tus posiciones. Puedes filtrar por cualquier criterio y por rango de valor. Los porcentajes se calculan sobre la selección actual:",
-            "He preparado una tabla interactiva con todas tus posiciones. Usa los filtros para encontrar exactamente lo que buscas y el rango de valores que te interesa:",
-            "Estas son todas tus posiciones actuales. Los filtros te permiten analizar segmentos específicos de tu portafolio. La columna de porcentaje muestra la proporción dentro de tu selección:"
+            "Here are the details of all your positions. You can filter by any criteria and by value range. Percentages are calculated based on the current selection:",
+            "I've prepared an interactive table with all your positions. Use the filters to find exactly what you're looking for and the value range that interests you:",
+            "These are all your current positions. The filters allow you to analyze specific segments of your portfolio. The percentage column shows the proportion within your selection:"
         ]
     }
 
-    return random.choice(responses.get(query_type, ["Aquí tienes lo que me pediste:"]))
+    return random.choice(responses.get(query_type, ["Here's what you asked for:"]))
 
-# Cargar datos del portafolio
+# Load portfolio data
 @st.cache_data
 def load_portfolio_data():
     portfolio_data = [
@@ -115,10 +223,10 @@ def load_portfolio_data():
     ]
     return pd.DataFrame(portfolio_data)
 
-# Cargar datos
+# Load data
 df = load_portfolio_data()
 
-# Clasificar tokens
+# Classify tokens
 def classify_token(token):
     stablecoins = ['USDT', 'USDC', 'DAI', 'BUSD']
     bluechips = ['ETH', 'BTC', 'SOL']
@@ -135,19 +243,18 @@ def classify_token(token):
 
 df['category'] = df['token'].apply(classify_token)
 
-# Configurar el agente de LangChain
+# Configure the LangChain agent
 @st.cache_resource
 def setup_agent(_df):
     try:
-        # Intentar primero leer de secrets.toml
-        api_key = st.secrets.get("OPENAI_API_KEY")
+        # Try to read from secrets.toml first
+        api_key = st.secrets.get("openai", {}).get("api_key", None)
     except:
-        # Si no está en secrets, leer de variables de entorno
-        import os
+        # If not in secrets, read from environment variables
         api_key = os.environ.get("OPENAI_API_KEY", None)
 
     if not api_key:
-        st.warning("No se encontró API key de OpenAI. La funcionalidad del asistente inteligente será limitada.")
+        st.warning("OpenAI API key not found. Smart assistant functionality will be limited.")
         return None
 
     try:
@@ -162,27 +269,22 @@ def setup_agent(_df):
         )
         return agent
     except Exception as e:
-        st.error(f"Error al configurar el agente: {e}")
+        st.error(f"Error configuring the agent: {e}")
         return None
-        
-# Crear agente
+
+# Configure agent
 agent = setup_agent(df)
 
-# Título principal
-st.title("💬 Asistente de Portafolio Cripto")
-
-# Sidebar para configuración
+# Sidebar for configuration
 with st.sidebar:
-    st.header("⚙️ Configuración")
+    st.header("⚙️ Configuration")
 
-    
+    st.subheader("Quick Queries")
 
-    st.subheader("Consultas Rápidas")
-
-    # Botones de acciones rápidas
-    if st.button("📊 Distribución por Wallet"):
+    # Quick action buttons
+    if st.button("📊 Wallet Distribution"):
         response = get_conversational_response('wallet')
-        st.session_state.messages.append({"role": "user", "content": "Muestra la distribución por wallet"})
+        st.session_state.messages.append({"role": "user", "content": "Show wallet distribution"})
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.show_visualization = {
             'show': True,
@@ -190,9 +292,9 @@ with st.sidebar:
             'group_by': 'wallet'
         }
 
-    if st.button("🔗 Análisis por Blockchain"):
+    if st.button("🔗 Blockchain Analysis"):
         response = get_conversational_response('chain')
-        st.session_state.messages.append({"role": "user", "content": "Visualiza mi exposición por blockchain"})
+        st.session_state.messages.append({"role": "user", "content": "Visualize my blockchain exposure"})
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.show_visualization = {
             'show': True,
@@ -200,9 +302,9 @@ with st.sidebar:
             'group_by': 'chain'
         }
 
-    if st.button("💰 Categorías de Token"):
+    if st.button("💰 Token Categories"):
         response = get_conversational_response('category')
-        st.session_state.messages.append({"role": "user", "content": "Distribución por categorías de token"})
+        st.session_state.messages.append({"role": "user", "content": "Distribution by token categories"})
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.show_visualization = {
             'show': True,
@@ -210,9 +312,9 @@ with st.sidebar:
             'group_by': 'category'
         }
 
-    if st.button("🔄 Dashboard Completo"):
+    if st.button("🔄 Complete Dashboard"):
         response = get_conversational_response('dashboard')
-        st.session_state.messages.append({"role": "user", "content": "Muestra un dashboard completo"})
+        st.session_state.messages.append({"role": "user", "content": "Show a complete dashboard"})
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.show_visualization = {
             'show': True,
@@ -220,9 +322,9 @@ with st.sidebar:
             'group_by': None
         }
 
-    if st.button("📋 Mostrar Posiciones"):
+    if st.button("📋 Show Positions"):
         response = get_conversational_response('positions')
-        st.session_state.messages.append({"role": "user", "content": "Muestra todas mis posiciones"})
+        st.session_state.messages.append({"role": "user", "content": "Show all my positions"})
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.show_visualization = {
             'show': True,
@@ -230,10 +332,10 @@ with st.sidebar:
             'group_by': None
         }
 
-    if st.button("💸 Valor Total"):
+    if st.button("💸 Total Value"):
         response = get_conversational_response('total')
         total_value = df['usd'].sum()
-        st.session_state.messages.append({"role": "user", "content": "¿Cuál es el valor total de mi portafolio?"})
+        st.session_state.messages.append({"role": "user", "content": "What's the total value of my portfolio?"})
         st.session_state.messages.append({"role": "assistant", "content": f"{response} ${total_value:.2f} USD"})
         st.session_state.show_visualization = {
             'show': False,
@@ -242,14 +344,30 @@ with st.sidebar:
         }
 
     st.markdown("---")
-    st.caption("Este asistente analiza tu portafolio de criptomonedas y genera visualizaciones.")
+    st.caption("This assistant analyzes your cryptocurrency portfolio and generates visualizations.")
 
-# Mostrar chat
+# Configure plot style for all visualizations
+plt.style.use('dark_background')
+custom_cmap = create_custom_cmap()
+
+def style_plot(ax):
+    """Apply Rocky's branding style to matplotlib plots"""
+    ax.set_facecolor(BG_COLOR)
+    ax.figure.set_facecolor(BG_COLOR)
+    ax.tick_params(colors='white')
+    ax.xaxis.label.set_color('white')
+    ax.yaxis.label.set_color('white')
+    ax.title.set_color(PRIMARY_COLOR)
+    for spine in ax.spines.values():
+        spine.set_color(ACCENT_COLOR)
+    return ax
+
+# Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Área de visualización (si está activada)
+# Visualization area (if activated)
 if st.session_state.show_visualization['show']:
     viz_type = st.session_state.show_visualization['type']
     group_by = st.session_state.show_visualization.get('group_by', None)
@@ -258,306 +376,320 @@ if st.session_state.show_visualization['show']:
 
     with viz_container:
         if viz_type == 'specific' and group_by:
-            st.subheader(f"Visualización por {group_by.capitalize()}")
+            st.subheader(f"Visualization by {group_by.capitalize()}")
 
-            # Agregar datos
+            # Aggregate data
             grouped_data = df.groupby(group_by)['usd'].sum()
             total = grouped_data.sum()
 
-            # Gráficos
+            # Charts
             col1, col2 = st.columns(2)
 
             with col1:
                 fig, ax = plt.subplots(figsize=(8, 5))
-                grouped_data.plot(kind='bar', ax=ax)
-                ax.set_title(f"USD por {group_by.capitalize()}")
+                grouped_data.plot(kind='bar', ax=ax, color=PRIMARY_COLOR)
+                style_plot(ax)
+                ax.set_title(f"USD by {group_by.capitalize()}")
                 ax.set_xlabel(group_by)
                 ax.set_ylabel("USD")
                 st.pyplot(fig)
 
             with col2:
                 fig, ax = plt.subplots(figsize=(8, 5))
-                grouped_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
-                ax.set_title(f"Distribución por {group_by.capitalize()}")
+                grouped_data.plot(kind='pie', autopct='%1.1f%%', ax=ax, colors=[PRIMARY_COLOR, SECONDARY_COLOR])
+                style_plot(ax)
+                ax.set_title(f"Distribution by {group_by.capitalize()}")
                 ax.axis('equal')
                 st.pyplot(fig)
 
-            # Tabla de datos
+            # Data table
             data_df = pd.DataFrame({
                 group_by.capitalize(): grouped_data.index,
                 "USD": grouped_data.values.round(2),
-                "Porcentaje (%)": [(v/total*100).round(2) for v in grouped_data.values]
+                "Percentage (%)": [(v/total*100).round(2) for v in grouped_data.values]
             })
             st.dataframe(data_df, hide_index=True)
 
-            # Añadir resumen descriptivo
-            st.subheader("Resumen del Análisis")
+            # Add descriptive summary
+            st.subheader("Analysis Summary")
 
-            # Preparar información para el resumen
+            # Prepare information for the summary
             top_item = grouped_data.idxmax()
             top_value = grouped_data.max()
             top_percent = (top_value/total*100).round(2)
 
-            # Calcular índice de concentración (Herfindahl-Hirschman simplificado)
+            # Calculate concentration index (simplified Herfindahl-Hirschman)
             hhi = ((grouped_data / total) ** 2).sum() * 100
 
-            # Texto con formato
+            # Formatted text
             st.markdown(f"""
-            ### Análisis de distribución por {group_by}
+            ### Distribution Analysis by {group_by}
 
-            - **Valor total:** ${total:.2f} USD
-            - **Número de {group_by}s:** {len(grouped_data)}
-            - **Mayor concentración:** {top_item} con ${top_value:.2f} ({top_percent}% del total)
-            - **Valor promedio por {group_by}:** ${(total/len(grouped_data)).round(2)} USD
-            - **Índice de concentración:** {hhi:.1f}/100 (valores más altos indican mayor concentración)
-            - **Distribución porcentual:** {', '.join([f"**{idx}:** {(val/total*100).round(1)}%" for idx, val in grouped_data.items()])}
+            - **Total value:** ${total:.2f} USD
+            - **Number of {group_by}s:** {len(grouped_data)}
+            - **Highest concentration:** {top_item} with ${top_value:.2f} ({top_percent}% of total)
+            - **Average value per {group_by}:** ${(total/len(grouped_data)).round(2)} USD
+            - **Concentration index:** {hhi:.1f}/100 (higher values indicate greater concentration)
+            - **Percentage distribution:** {', '.join([f"**{idx}:** {(val/total*100).round(1)}%" for idx, val in grouped_data.items()])}
             """)
 
         elif viz_type == 'dashboard':
-            st.subheader("Dashboard del Portafolio")
-        
-            # Primera fila: métricas generales
+            st.subheader("Portfolio Dashboard")
+
+            # First row: general metrics
             total_value = df['usd'].sum()
             avg_value = df['usd'].mean()
             unique_chains = df['chain'].nunique()
-        
+
             col1, col2, col3 = st.columns(3)
-            col1.metric("Valor Total", f"${total_value:.2f}")
-            col2.metric("Promedio por Inversión", f"${avg_value:.2f}")
+            col1.metric("Total Value", f"${total_value:.2f}")
+            col2.metric("Average per Position", f"${avg_value:.2f}")
             col3.metric("Blockchains", f"{unique_chains}")
-        
-            # Distribución por Wallet
-            st.subheader("Distribución por Wallet")
+
+            # Wallet Distribution
+            st.subheader("Wallet Distribution")
             wallet_data = df.groupby('wallet')['usd'].sum().sort_values(ascending=False)
-        
+
             col1, col2 = st.columns(2)
-        
+
             with col1:
-                # Gráfico de Wallet (tarta)
+                # Wallet chart (pie)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                wallet_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
-                ax.set_title("Distribución por Wallet")
+                colors = plt.cm.get_cmap(custom_cmap)(np.linspace(0, 1, len(wallet_data)))
+                wallet_data.plot(kind='pie', autopct='%1.1f%%', ax=ax, colors=colors)
+                style_plot(ax)
+                ax.set_title("Distribution by Wallet")
                 ax.axis('equal')
                 st.pyplot(fig)
-        
+
             with col2:
-                # Gráfico de Wallet (barras)
+                # Wallet chart (bar)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                wallet_data.plot(kind='bar', ax=ax)
-                ax.set_title("USD por Wallet")
+                wallet_data.plot(kind='bar', ax=ax, color=colors)
+                style_plot(ax)
+                ax.set_title("USD by Wallet")
                 ax.set_xlabel("Wallet")
                 ax.set_ylabel("USD")
                 st.pyplot(fig)
-        
-            # Distribución por Blockchain
-            st.subheader("Distribución por Blockchain")
+
+            # Blockchain Distribution
+            st.subheader("Blockchain Distribution")
             chain_data = df.groupby('chain')['usd'].sum().sort_values(ascending=False)
-        
+
             col1, col2 = st.columns(2)
-        
+
             with col1:
-                # Gráfico de Chain (tarta)
+                # Chain chart (pie)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                chain_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
-                ax.set_title("Distribución por Blockchain")
+                colors = plt.cm.get_cmap(custom_cmap)(np.linspace(0, 1, len(chain_data)))
+                chain_data.plot(kind='pie', autopct='%1.1f%%', ax=ax, colors=colors)
+                style_plot(ax)
+                ax.set_title("Distribution by Blockchain")
                 ax.axis('equal')
                 st.pyplot(fig)
-        
+
             with col2:
-                # Gráfico de Chain (barras)
+                # Chain chart (bar)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                chain_data.plot(kind='bar', ax=ax)
-                ax.set_title("USD por Blockchain")
+                chain_data.plot(kind='bar', ax=ax, color=colors)
+                style_plot(ax)
+                ax.set_title("USD by Blockchain")
                 ax.set_xlabel("Blockchain")
                 ax.set_ylabel("USD")
                 st.pyplot(fig)
-        
-            # Distribución por Categoría
-            st.subheader("Distribución por Categoría")
+
+            # Category Distribution
+            st.subheader("Category Distribution")
             cat_data = df.groupby('category')['usd'].sum().sort_values(ascending=False)
-        
+
             col1, col2 = st.columns(2)
-        
+
             with col1:
-                # Gráfico de Categoría (tarta)
+                # Category chart (pie)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                cat_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
-                ax.set_title("Distribución por Categoría")
+                colors = plt.cm.get_cmap(custom_cmap)(np.linspace(0, 1, len(cat_data)))
+                cat_data.plot(kind='pie', autopct='%1.1f%%', ax=ax, colors=colors)
+                style_plot(ax)
+                ax.set_title("Distribution by Category")
                 ax.axis('equal')
                 st.pyplot(fig)
-        
+
             with col2:
-                # Gráfico de Categoría (barras)
+                # Category chart (bar)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                cat_data.plot(kind='bar', ax=ax)
-                ax.set_title("USD por Categoría")
-                ax.set_xlabel("Categoría")
+                cat_data.plot(kind='bar', ax=ax, color=colors)
+                style_plot(ax)
+                ax.set_title("USD by Category")
+                ax.set_xlabel("Category")
                 ax.set_ylabel("USD")
                 st.pyplot(fig)
-        
-            # Distribución por Protocolo
-            st.subheader("Distribución por Protocolo")
+
+            # Protocol Distribution
+            st.subheader("Protocol Distribution")
             protocol_data = df.groupby('protocol')['usd'].sum().sort_values(ascending=False)
-            
+
             fig, ax = plt.subplots(figsize=(10, 6))
-            protocol_data.plot(kind='barh', ax=ax)
-            # Añadir esta línea para invertir el eje Y
-            ax.invert_yaxis()  # Esto hace que el orden sea descendente visualmente
-            ax.set_title("USD por Protocolo (Descendente)")
+            colors = plt.cm.get_cmap(custom_cmap)(np.linspace(0, 1, len(protocol_data)))
+            protocol_data.plot(kind='barh', ax=ax, color=colors)
+            style_plot(ax)
+            ax.invert_yaxis()  # Make it display in descending order visually
+            ax.set_title("USD by Protocol (Descending)")
             ax.set_xlabel("USD")
-            ax.set_ylabel("Protocolo")
+            ax.set_ylabel("Protocol")
             st.pyplot(fig)
-        
-            # Ranking de Posiciones Individuales
-            st.subheader("Ranking de Posiciones")
+
+            # Position Ranking
+            st.subheader("Position Ranking")
             positions_df = df.copy()
             positions_df['position_name'] = positions_df['token'] + ' (' + positions_df['protocol'] + ')'
-            
-            # Ordenar por USD en forma descendente
+
+            # Sort by USD in descending order
             top_positions = positions_df.sort_values('usd', ascending=False)
-            
+
             if len(top_positions) > 10:
                 top_positions = top_positions.head(10)
-            
-            # Gráfico de Posiciones (barras horizontales)
+
+            # Position chart (horizontal bars)
             fig, ax = plt.subplots(figsize=(10, max(6, len(top_positions) * 0.4)))
             positions_plot = top_positions.set_index('position_name')['usd']
-            positions_plot.plot(kind='barh', ax=ax)
-            # Añadir esta línea para invertir el eje Y
-            ax.invert_yaxis()  # Esto hace que el orden sea descendente visualmente
-            ax.set_title("Top Posiciones por USD")
+            colors = plt.cm.get_cmap(custom_cmap)(np.linspace(0, 1, len(positions_plot)))
+            positions_plot.plot(kind='barh', ax=ax, color=colors)
+            style_plot(ax)
+            ax.invert_yaxis()  # Make it display in descending order visually
+            ax.set_title("Top Positions by USD")
             ax.set_xlabel("USD")
-            ax.set_ylabel("Posición")
+            ax.set_ylabel("Position")
             st.pyplot(fig)
-        
-            # Añadir resumen descriptivo para el dashboard
-            st.subheader("Resumen del Portafolio")
-        
-            # Calcular datos para el resumen
+
+            # Add descriptive summary for the dashboard
+            st.subheader("Portfolio Summary")
+
+            # Calculate data for the summary
             top_wallet = wallet_data.idxmax()
             top_wallet_value = wallet_data.max()
             top_wallet_percent = (top_wallet_value/total_value*100).round(2)
-        
+
             top_chain = chain_data.idxmax()
             top_chain_value = chain_data.max()
             top_chain_percent = (top_chain_value/total_value*100).round(2)
-        
+
             top_category = cat_data.idxmax()
             top_category_value = cat_data.max()
             top_category_percent = (top_category_value/total_value*100).round(2)
-        
-            # Calcular índices de concentración
+
+            # Calculate concentration indices
             wallet_hhi = ((wallet_data / total_value) ** 2).sum() * 100
             chain_hhi = ((chain_data / total_value) ** 2).sum() * 100
             category_hhi = ((cat_data / total_value) ** 2).sum() * 100
-        
-            # Calcular métricas de diversificación
-            coef_var = (df['usd'].std() / df['usd'].mean() * 100)  # Coeficiente de variación
-            positions_per_chain = round(len(df) / unique_chains, 1)  # Corregido
-        
-            # Crear resumen descriptivo
+
+            # Calculate diversification metrics
+            coef_var = (df['usd'].std() / df['usd'].mean() * 100)  # Coefficient of variation
+            positions_per_chain = round(len(df) / unique_chains, 1)  # Corrected
+
+            # Create descriptive summary
             st.markdown(f"""
-            ### Estadísticas del Portafolio
-        
-            El portafolio tiene un valor total de **${total_value:.2f}** distribuido en **{len(df)}** posiciones a través de **{unique_chains}** blockchains diferentes.
-        
-            #### Distribución Principal:
-            - **Wallet**: Mayor concentración en **{top_wallet}** con **${top_wallet_value:.2f}** (**{top_wallet_percent}%** del total)
-            - **Blockchain**: Predominio de **{top_chain}** con **${top_chain_value:.2f}** (**{top_chain_percent}%** del total)
-            - **Categoría**: Mayor presencia de **{top_category}** con **${top_category_value:.2f}** (**{top_category_percent}%**)
-        
-            #### Métricas de Diversificación:
-            - **Índice de concentración por wallet**: **{wallet_hhi:.1f}**/100
-            - **Índice de concentración por blockchain**: **{chain_hhi:.1f}**/100
-            - **Índice de concentración por categoría**: **{category_hhi:.1f}**/100
-            - **Coeficiente de variación**: **{coef_var:.1f}%** (dispersión de valores)
-            - **Posiciones por blockchain**: **{positions_per_chain}** (promedio)
-        
-            #### Distribución por Blockchain:
+            ### Portfolio Statistics
+
+            The portfolio has a total value of **${total_value:.2f}** distributed across **{len(df)}** positions through **{unique_chains}** different blockchains.
+
+            #### Main Distribution:
+            - **Wallet**: Highest concentration in **{top_wallet}** with **${top_wallet_value:.2f}** (**{top_wallet_percent}%** of total)
+            - **Blockchain**: Predominance of **{top_chain}** with **${top_chain_value:.2f}** (**{top_chain_percent}%** of total)
+            - **Category**: Highest presence of **{top_category}** with **${top_category_value:.2f}** (**{top_category_percent}%**)
+
+            #### Diversification Metrics:
+            - **Wallet concentration index**: **{wallet_hhi:.1f}**/100
+            - **Blockchain concentration index**: **{chain_hhi:.1f}**/100
+            - **Category concentration index**: **{category_hhi:.1f}**/100
+            - **Coefficient of variation**: **{coef_var:.1f}%** (value dispersion)
+            - **Positions per blockchain**: **{positions_per_chain}** (average)
+
+            #### Blockchain Distribution:
             {', '.join([f"**{chain}**: **{(value/total_value*100).round(1)}%**" for chain, value in chain_data.items()])}
             """)
-        elif viz_type == 'positions':
-            st.subheader("📋 Todas las Posiciones")
 
-            # Enriquecer el DataFrame con datos para mostrar
+        elif viz_type == 'positions':
+            st.subheader("📋 All Positions")
+
+            # Enrich DataFrame with data to display
             df_display = df.copy()
 
-            # Crear filtros
-            st.write("#### Filtros")
+            # Create filters
+            st.write("#### Filters")
             col1, col2, col3, col4 = st.columns(4)
 
             with col1:
-                # Filtro de Wallet
-                wallet_options = ['Todos'] + sorted(df_display['wallet'].unique().tolist())
+                # Wallet filter
+                wallet_options = ['All'] + sorted(df_display['wallet'].unique().tolist())
                 wallet_filter = st.selectbox('Wallet', wallet_options)
 
             with col2:
-                # Filtro de Blockchain
-                chain_options = ['Todos'] + sorted(df_display['chain'].unique().tolist())
+                # Blockchain filter
+                chain_options = ['All'] + sorted(df_display['chain'].unique().tolist())
                 chain_filter = st.selectbox('Blockchain', chain_options)
 
             with col3:
-                # Filtro de Categoría
-                category_options = ['Todos'] + sorted(df_display['category'].unique().tolist())
-                category_filter = st.selectbox('Categoría', category_options)
+                # Category filter
+                category_options = ['All'] + sorted(df_display['category'].unique().tolist())
+                category_filter = st.selectbox('Category', category_options)
 
             with col4:
-                # Filtro de Protocolo
-                protocol_options = ['Todos'] + sorted(df_display['protocol'].unique().tolist())
-                protocol_filter = st.selectbox('Protocolo', protocol_options)
+                # Protocol filter
+                protocol_options = ['All'] + sorted(df_display['protocol'].unique().tolist())
+                protocol_filter = st.selectbox('Protocol', protocol_options)
 
-            # Aplicar filtros
-            if wallet_filter != 'Todos':
+            # Apply filters
+            if wallet_filter != 'All':
                 df_display = df_display[df_display['wallet'] == wallet_filter]
 
-            if chain_filter != 'Todos':
+            if chain_filter != 'All':
                 df_display = df_display[df_display['chain'] == chain_filter]
 
-            if category_filter != 'Todos':
+            if category_filter != 'All':
                 df_display = df_display[df_display['category'] == category_filter]
 
-            if protocol_filter != 'Todos':
+            if protocol_filter != 'All':
                 df_display = df_display[df_display['protocol'] == protocol_filter]
 
-            # Rango para filtrar por valor en USD (mínimo y máximo)
+            # Range to filter by USD value (minimum and maximum)
             min_usd = float(df['usd'].min())
             max_usd = float(df['usd'].max())
 
             usd_range = st.slider(
-                "Rango de Valor (USD)",
+                "Value Range (USD)",
                 min_value=min_usd,
                 max_value=max_usd,
-                value=(max(min_usd, 5.0), max_usd),  # Valor predeterminado: mínimo $5
+                value=(max(min_usd, 5.0), max_usd),  # Default value: minimum $5
                 step=1.0
             )
 
-            # Aplicar filtro de rango USD
+            # Apply USD range filter
             df_display = df_display[(df_display['usd'] >= usd_range[0]) & (df_display['usd'] <= usd_range[1])]
 
-            # Mostrar número de resultados
-            st.write(f"Mostrando {len(df_display)} de {len(df)} posiciones")
+            # Show number of results
+            st.write(f"Showing {len(df_display)} of {len(df)} positions")
 
-            # Calcular los porcentajes DESPUÉS de todos los filtros, basados en la tabla filtrada
+            # Calculate percentages AFTER all filters, based on the filtered table
             if not df_display.empty:
                 filtered_total = df_display['usd'].sum()
-                df_display['% del Total'] = (df_display['usd'] / filtered_total * 100).round(2)
+                df_display['% of Total'] = (df_display['usd'] / filtered_total * 100).round(2)
             else:
-                df_display['% del Total'] = 0  # Manejo de caso vacío
+                df_display['% of Total'] = 0  # Handle empty case
 
-            # Reorganizar columnas para mejor visualización
-            df_display = df_display[['wallet', 'chain', 'protocol', 'token', 'category', 'usd', '% del Total']]
+            # Reorganize columns for better display
+            df_display = df_display[['wallet', 'chain', 'protocol', 'token', 'category', 'usd', '% of Total']]
 
-            # Renombrar columnas para mejor presentación
-            df_display.columns = ['Wallet', 'Blockchain', 'Protocolo', 'Token', 'Categoría', 'USD', '% de Selección']
+            # Rename columns for better presentation
+            df_display.columns = ['Wallet', 'Blockchain', 'Protocol', 'Token', 'Category', 'USD', '% of Selection']
 
-            # Tabla interactiva con filtrado y ordenación
+            # Interactive table with filtering and sorting
             st.dataframe(
                 df_display,
                 column_config={
                     "USD": st.column_config.NumberColumn(
                         format="$%.2f",
                     ),
-                    "% de Selección": st.column_config.ProgressColumn(
+                    "% of Selection": st.column_config.ProgressColumn(
                         format="%.1f%%",
                         min_value=0,
                         max_value=100,
@@ -567,166 +699,162 @@ if st.session_state.show_visualization['show']:
                 use_container_width=True
             )
 
-            # Agregar algunas métricas útiles
-            if len(df_display) > 0:  # Solo si hay resultados después de filtrar
+            # Add useful metrics
+            if len(df_display) > 0:  # Only if there are results after filtering
                 filtered_total = df_display['USD'].sum()
                 total_portfolio = df['usd'].sum()
                 filtered_percent = (filtered_total / total_portfolio) * 100
 
-                st.subheader("Métricas de la Selección")
+                st.subheader("Selection Metrics")
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Posiciones", f"{len(df_display)}")
+                    st.metric("Positions", f"{len(df_display)}")
                 with col2:
-                    st.metric("Valor Total", f"${filtered_total:.2f}")
+                    st.metric("Total Value", f"${filtered_total:.2f}")
                 with col3:
-                    st.metric("% del Portfolio", f"{filtered_percent:.1f}%")
+                    st.metric("% of Portfolio", f"{filtered_percent:.1f}%")
                 with col4:
                     if len(df_display) > 0:
-                        st.metric("Promedio", f"${df_display['USD'].mean():.2f}")
+                        st.metric("Average", f"${df_display['USD'].mean():.2f}")
 
-                # Añadir resumen descriptivo para las posiciones filtradas
-                st.subheader("Análisis de la Selección")
+                # Add descriptive summary for filtered positions
+                st.subheader("Selection Analysis")
 
-                # Calcular información para el resumen
+                # Calculate information for the summary
                 top_position = df_display.loc[df_display['USD'].idxmax()]
                 bottom_position = df_display.loc[df_display['USD'].idxmin()]
 
-                # Calcular estadísticas y agregaciones
+                # Calculate statistics and aggregations
                 chain_counts = df_display['Blockchain'].value_counts()
-                top_chain = chain_counts.index[0] if len(chain_counts) > 0 else "ninguna"
+                top_chain = chain_counts.index[0] if len(chain_counts) > 0 else "none"
                 chain_diversity = len(chain_counts)
 
                 wallet_distribution = df_display.groupby('Wallet')['USD'].sum()
-                top_wallet = wallet_distribution.idxmax() if not wallet_distribution.empty else "ninguna"
+                top_wallet = wallet_distribution.idxmax() if not wallet_distribution.empty else "none"
                 top_wallet_value = wallet_distribution.max() if not wallet_distribution.empty else 0
                 top_wallet_percent = (top_wallet_value/filtered_total*100).round(2) if filtered_total > 0 else 0
 
-                # Calcular estadísticas descriptivas
+                # Calculate descriptive statistics
                 value_range = df_display['USD'].max() - df_display['USD'].min()
                 std_dev = df_display['USD'].std()
                 median_value = df_display['USD'].median()
                 cv = (std_dev / df_display['USD'].mean() * 100).round(1) if df_display['USD'].mean() > 0 else 0
 
-                # Calcular índice de concentración
+                # Calculate concentration index
                 wallet_hhi = ((wallet_distribution / filtered_total) ** 2).sum() * 100 if not df_display.empty and filtered_total > 0 else 0
 
-                # Crear resumen descriptivo con datos importantes en negrita
+                # Create descriptive summary with important data in bold
                 st.markdown(f"""
-                ### Estadísticas de la Selección
+                ### Selection Statistics
 
-                En esta selección de **{len(df_display)} posiciones** con valor total de **${filtered_total:.2f}**:
+                In this selection of **{len(df_display)} positions** with total value of **${filtered_total:.2f}**:
 
-                #### Distribución de Valor:
-                - **Posición máxima:** ${top_position['USD']:.2f} ({top_position['Token']} en {top_position['Protocolo']})
-                - **Posición mínima:** ${bottom_position['USD']:.2f} ({bottom_position['Token']})
-                - **Valor mediano:** ${median_value:.2f}
-                - **Desviación estándar:** ${std_dev:.2f}
-                - **Coeficiente de variación:** {cv}%
-                - **Rango de valores:** ${value_range:.2f}
+                #### Value Distribution:
+                - **Maximum position:** ${top_position['USD']:.2f} ({top_position['Token']} in {top_position['Protocol']})
+                - **Minimum position:** ${bottom_position['USD']:.2f} ({bottom_position['Token']})
+                - **Median value:** ${median_value:.2f}
+                - **Standard deviation:** ${std_dev:.2f}
+                - **Coefficient of variation:** {cv}%
+                - **Value range:** ${value_range:.2f}
 
-                #### Concentración y Diversificación:
-                - **Índice de concentración por wallet:** {wallet_hhi:.1f}/100
-                - **Blockchains representadas:** {chain_diversity} cadenas
-                - **Principal blockchain:** {top_chain} ({chain_counts[top_chain]} posiciones)
-                - **Principal wallet:** {top_wallet} (${top_wallet_value:.2f}, {top_wallet_percent}% del total seleccionado)
+                #### Concentration and Diversification:
+                - **Wallet concentration index:** {wallet_hhi:.1f}/100
+                - **Blockchains represented:** {chain_diversity} chains
+                - **Main blockchain:** {top_chain} ({chain_counts[top_chain]} positions)
+                - **Main wallet:** {top_wallet} (${top_wallet_value:.2f}, {top_wallet_percent}% of selected total)
 
-                Esta selección representa el **{filtered_percent:.1f}%** del valor total del portafolio.
+                This selection represents **{filtered_percent:.1f}%** of the total portfolio value.
                 """)
 
-                # Añadir datos adicionales si hay suficientes posiciones
+                # Add additional data if there are enough positions
                 if len(df_display) > 1:
-                    # Agregaciones adicionales
-                    protocol_counts = df_display['Protocolo'].value_counts()
-                    top_protocol = protocol_counts.index[0] if not protocol_counts.empty else "ninguno"
-                    category_distribution = df_display.groupby('Categoría')['USD'].sum()
+                    # Additional aggregations
+                    protocol_counts = df_display['Protocol'].value_counts()
+                    top_protocol = protocol_counts.index[0] if not protocol_counts.empty else "none"
+                    category_distribution = df_display.groupby('Category')['USD'].sum()
                     category_percents = ((category_distribution / filtered_total) * 100).round(1)
 
-                    # Mostrar datos adicionales de forma neutral
-                    st.markdown("### Agregaciones Adicionales")
+                    # Display additional data neutrally
+                    st.markdown("### Additional Aggregations")
                     st.markdown(f"""
-                    #### Distribución por Categoría:
+                    #### Distribution by Category:
                     {', '.join([f"**{cat}:** **{val}%**" for cat, val in category_percents.items()])}
 
-                    #### Distribución por Protocolo:
-                    - **Protocolos utilizados:** {len(protocol_counts)}
-                    - **Principal protocolo:** {top_protocol} ({protocol_counts[top_protocol]} posiciones)
+                    #### Distribution by Protocol:
+                    - **Protocols used:** {len(protocol_counts)}
+                    - **Main protocol:** {top_protocol} ({protocol_counts[top_protocol]} positions)
 
-                    #### Distribución Estadística:
-                    - **Media vs. Mediana:** La media (${df_display['USD'].mean():.2f}) es {
-                        "mayor que" if df_display['USD'].mean() > median_value else
-                        "menor que" if df_display['USD'].mean() < median_value else
-                        "igual a"} la mediana (${median_value:.2f}), lo que indica una distribución {
-                        "con sesgo hacia valores altos" if df_display['USD'].mean() > median_value else
-                        "con sesgo hacia valores bajos" if df_display['USD'].mean() < median_value else
-                        "simétrica"}
+                    #### Statistical Distribution:
+                    - **Mean vs. Median:** The mean (${df_display['USD'].mean():.2f}) is {
+                        "higher than" if df_display['USD'].mean() > median_value else
+                        "lower than" if df_display['USD'].mean() < median_value else
+                        "equal to"} the median (${median_value:.2f}), indicating a distribution {
+                        "with bias towards high values" if df_display['USD'].mean() > median_value else
+                        "with bias towards low values" if df_display['USD'].mean() < median_value else
+                        "that is symmetric"}
                     """)
 
-# Entrada de usuario
-prompt = st.chat_input("Escribe tu consulta...")
+# User input
+prompt = st.chat_input("Type your query...")
 
 if prompt:
-    # Añadir mensaje del usuario
+    # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Analizar la consulta para determinar si es de visualización
+    # Analyze the query to determine if it's visualization-related
     query_lower = prompt.lower()
-    viz_terms = ["gráfico", "grafico", "visualiza", "visualizar", "mostrar", "ver", "distribución", "distribucion", "dashboard", "posiciones"]
-    is_viz_query = any(term in query_lower for term in viz_terms)
-
-    # Determinar el tipo de consulta
-    if "posiciones" in query_lower or "positions" in query_lower:
+    
+    # Function to detect query intent (supporting both English and Spanish)
+    def detect_query_intent(query_text):
+        query_lower = query_text.lower()
+        
+        for intent, keywords in BILINGUAL_KEYWORDS.items():
+            if any(keyword in query_lower for keyword in keywords):
+                return intent
+                
+        return None
+    
+    intent = detect_query_intent(query_lower)
+    
+    # Handle visualization queries
+    if intent == 'positions':
         viz_type = 'positions'
         group_by = None
         asst_response = get_conversational_response('positions')
-    else:
-        # Variables de agrupación
-        group_vars = {
-            "wallet": "wallet", "billetera": "wallet",
-            "blockchain": "chain", "chain": "chain", "cadena": "chain",
-            "categoria": "category", "categoría": "category", "tipo de token": "category",
-            "protocolo": "protocol", "protocol": "protocol",
-            "token": "token"
-        }
-
-        group_by = None
-        for term, var in group_vars.items():
-            if term in query_lower:
-                group_by = var
-                break
-
-        # Decidir si mostrar visualización
-        if is_viz_query:
-            if any(term in query_lower for term in ["dashboard", "completo", "general", "todos"]):
-                viz_type = 'dashboard'
-                group_by = None
-                asst_response = get_conversational_response('dashboard')
-            elif group_by:
-                viz_type = 'specific'
-                asst_response = get_conversational_response(group_by if group_by in ['wallet', 'chain', 'category'] else 'specific')
-            else:
-                # Si pide visualización pero no especifica variable ni dashboard
-                viz_type = 'dashboard'
-                group_by = None
-                asst_response = get_conversational_response('dashboard')
-        else:
-            # No es una consulta de visualización
+    elif intent:
+        # For visualization intents
+        if intent == 'dashboard':
+            viz_type = 'dashboard'
+            group_by = None
+            asst_response = get_conversational_response('dashboard')
+        elif intent in ['wallet', 'chain', 'category', 'protocol']:
+            viz_type = 'specific'
+            group_by = 'category' if intent == 'category' else intent
+            asst_response = get_conversational_response(intent)
+        elif intent == 'total':
+            total_value = df['usd'].sum()
+            asst_response = f"{get_conversational_response('total')} ${total_value:.2f} USD"
             viz_type = None
-            if "total" in query_lower or "valor" in query_lower:
-                total_value = df['usd'].sum()
-                asst_response = f"{get_conversational_response('total')} ${total_value:.2f} USD"
-            else:
-                # Usar el agente para otras consultas
-                if agent:
-                    try:
-                        asst_response = agent.run(prompt)
-                    except Exception as e:
-                        asst_response = f"Error al procesar tu consulta: {str(e)}"
-                else:
-                    asst_response = "No puedo responder sin una API key válida. Por favor, configura la API key en la barra lateral."
+            group_by = None
+        else:
+            # Default to dashboard if intent detected but not specific
+            viz_type = 'dashboard'
+            group_by = None
+            asst_response = get_conversational_response('dashboard')
+    else:
+        # Not a visualization query
+        viz_type = None
+        group_by = None
+        if agent:
+            try:
+                asst_response = agent.run(prompt)
+            except Exception as e:
+                asst_response = f"Error processing your query: {str(e)}"
+        else:
+            asst_response = "I can't respond without a valid API key. Please configure the API key in the sidebar."
 
-    # Actualizar estado de visualización
-    if is_viz_query:
+    # Update visualization state
+    if intent and intent != 'total':
         st.session_state.show_visualization = {
             'show': True,
             'type': viz_type,
@@ -739,8 +867,8 @@ if prompt:
             'group_by': None
         }
 
-    # Añadir respuesta del asistente
+    # Add assistant response
     st.session_state.messages.append({"role": "assistant", "content": asst_response})
 
-    # Recargar para mostrar la respuesta completa
+    # Reload to show the complete response
     st.rerun()
