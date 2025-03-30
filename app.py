@@ -99,7 +99,7 @@ def apply_custom_branding():
         }}
 
         .logo-container img {{
-            width: 50%;
+            width: 30%;
             margin-bottom: 15px;
         }}
 
