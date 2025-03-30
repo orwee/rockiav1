@@ -133,8 +133,8 @@ def apply_custom_branding():
 
 # Page configuration
 st.set_page_config(
-    page_title="Rocky - DeFi Portfolio",
-    page_icon="📊",
+    page_title="Rocky - DeFi Portfolio Intelligence",
+    page_icon="🚀",
     layout="wide"
 )
 
