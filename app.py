@@ -41,7 +41,7 @@ def apply_custom_branding():
         /* Streamlit components customization */
         .stButton > button {{
             background-color: {PRIMARY_COLOR};
-            color: white;
+            color: black;
             border: none;
             font-family: 'IBM Plex Mono', monospace;
         }}
