@@ -439,7 +439,7 @@ def setup_agent(_df, api_key=None):
             verbose=True,
             agent_type=AgentType.OPENAI_FUNCTIONS,
             handle_parsing_errors=True,
-            setting allow_dangerous_code=True
+            allow_dangerous_code=True
         )
         return agent
     except Exception as e:
