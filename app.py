@@ -320,108 +320,163 @@ if st.session_state.show_visualization['show']:
 
         elif viz_type == 'dashboard':
             st.subheader("Dashboard del Portafolio")
-
+        
             # Primera fila: métricas generales
             total_value = df['usd'].sum()
             avg_value = df['usd'].mean()
             unique_chains = df['chain'].nunique()
-
+        
             col1, col2, col3 = st.columns(3)
             col1.metric("Valor Total", f"${total_value:.2f}")
             col2.metric("Promedio por Inversión", f"${avg_value:.2f}")
             col3.metric("Blockchains", f"{unique_chains}")
-
-            # Segunda fila: visualizaciones principales
+        
+            # Distribución por Wallet
+            st.subheader("Distribución por Wallet")
+            wallet_data = df.groupby('wallet')['usd'].sum().sort_values(ascending=False)
+        
             col1, col2 = st.columns(2)
-
+        
             with col1:
-                # Gráfico de Wallet
+                # Gráfico de Wallet (tarta)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                wallet_data = df.groupby('wallet')['usd'].sum()
                 wallet_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
                 ax.set_title("Distribución por Wallet")
                 ax.axis('equal')
                 st.pyplot(fig)
-
+        
             with col2:
-                # Gráfico de Chain
+                # Gráfico de Wallet (barras)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                chain_data = df.groupby('chain')['usd'].sum().sort_values(ascending=False)
-                chain_data.plot(kind='bar', ax=ax)
-                ax.set_title("USD por Blockchain")
-                ax.set_xlabel("Chain")
+                wallet_data.plot(kind='bar', ax=ax)
+                ax.set_title("USD por Wallet")
+                ax.set_xlabel("Wallet")
                 ax.set_ylabel("USD")
                 st.pyplot(fig)
-
-            # Tercera fila
+        
+            # Distribución por Blockchain
+            st.subheader("Distribución por Blockchain")
+            chain_data = df.groupby('chain')['usd'].sum().sort_values(ascending=False)
+        
             col1, col2 = st.columns(2)
-
+        
             with col1:
-                # Gráfico de Categoría
+                # Gráfico de Chain (tarta)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                cat_data = df.groupby('category')['usd'].sum()
+                chain_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
+                ax.set_title("Distribución por Blockchain")
+                ax.axis('equal')
+                st.pyplot(fig)
+        
+            with col2:
+                # Gráfico de Chain (barras)
+                fig, ax = plt.subplots(figsize=(8, 5))
+                chain_data.plot(kind='bar', ax=ax)
+                ax.set_title("USD por Blockchain")
+                ax.set_xlabel("Blockchain")
+                ax.set_ylabel("USD")
+                st.pyplot(fig)
+        
+            # Distribución por Categoría
+            st.subheader("Distribución por Categoría")
+            cat_data = df.groupby('category')['usd'].sum().sort_values(ascending=False)
+        
+            col1, col2 = st.columns(2)
+        
+            with col1:
+                # Gráfico de Categoría (tarta)
+                fig, ax = plt.subplots(figsize=(8, 5))
                 cat_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
                 ax.set_title("Distribución por Categoría")
                 ax.axis('equal')
                 st.pyplot(fig)
-
+        
             with col2:
-                # Gráfico de Protocolo
+                # Gráfico de Categoría (barras)
                 fig, ax = plt.subplots(figsize=(8, 5))
-                protocol_data = df.groupby('protocol')['usd'].sum().sort_values(ascending=False)
-                protocol_data.plot(kind='bar', ax=ax)
-                ax.set_title("USD por Protocolo")
-                ax.set_xlabel("Protocolo")
+                cat_data.plot(kind='bar', ax=ax)
+                ax.set_title("USD por Categoría")
+                ax.set_xlabel("Categoría")
                 ax.set_ylabel("USD")
                 st.pyplot(fig)
-
+        
+            # Distribución por Protocolo
+            st.subheader("Distribución por Protocolo")
+            protocol_data = df.groupby('protocol')['usd'].sum().sort_values(ascending=False)
+        
+            fig, ax = plt.subplots(figsize=(10, 6))
+            protocol_data.plot(kind='barh', ax=ax)
+            ax.set_title("USD por Protocolo (Descendente)")
+            ax.set_xlabel("USD")
+            ax.set_ylabel("Protocolo")
+            st.pyplot(fig)
+        
+            # Ranking de Posiciones Individuales
+            st.subheader("Ranking de Posiciones")
+            positions_df = df.copy()
+            positions_df['position_name'] = positions_df['token'] + ' (' + positions_df['protocol'] + ')'
+        
+            # Ordenar por USD en forma descendente
+            top_positions = positions_df.sort_values('usd', ascending=False)
+        
+            if len(top_positions) > 10:
+                top_positions = top_positions.head(10)
+        
+            # Gráfico de Posiciones (barras horizontales)
+            fig, ax = plt.subplots(figsize=(10, max(6, len(top_positions) * 0.4)))
+            positions_plot = top_positions.set_index('position_name')['usd']
+            positions_plot.plot(kind='barh', ax=ax)
+            ax.set_title("Top Posiciones por USD")
+            ax.set_xlabel("USD")
+            ax.set_ylabel("Posición")
+            st.pyplot(fig)
+        
             # Añadir resumen descriptivo para el dashboard
             st.subheader("Resumen del Portafolio")
-
+        
             # Calcular datos para el resumen
             top_wallet = wallet_data.idxmax()
             top_wallet_value = wallet_data.max()
             top_wallet_percent = (top_wallet_value/total_value*100).round(2)
-
+        
             top_chain = chain_data.idxmax()
             top_chain_value = chain_data.max()
             top_chain_percent = (top_chain_value/total_value*100).round(2)
-
+        
             top_category = cat_data.idxmax()
             top_category_value = cat_data.max()
             top_category_percent = (top_category_value/total_value*100).round(2)
-
+        
             # Calcular índices de concentración
             wallet_hhi = ((wallet_data / total_value) ** 2).sum() * 100
             chain_hhi = ((chain_data / total_value) ** 2).sum() * 100
             category_hhi = ((cat_data / total_value) ** 2).sum() * 100
-
+        
             # Calcular métricas de diversificación
             coef_var = (df['usd'].std() / df['usd'].mean() * 100)  # Coeficiente de variación
-            positions_per_chain = round(len(df) / unique_chains, 1)  # Usar función round en lugar del método
-
+            positions_per_chain = round(len(df) / unique_chains, 1)  # Corregido
+        
             # Crear resumen descriptivo
             st.markdown(f"""
             ### Estadísticas del Portafolio
-
+        
             El portafolio tiene un valor total de **${total_value:.2f}** distribuido en **{len(df)}** posiciones a través de **{unique_chains}** blockchains diferentes.
-
+        
             #### Distribución Principal:
             - **Wallet**: Mayor concentración en **{top_wallet}** con **${top_wallet_value:.2f}** (**{top_wallet_percent}%** del total)
             - **Blockchain**: Predominio de **{top_chain}** con **${top_chain_value:.2f}** (**{top_chain_percent}%** del total)
             - **Categoría**: Mayor presencia de **{top_category}** con **${top_category_value:.2f}** (**{top_category_percent}%**)
-
+        
             #### Métricas de Diversificación:
             - **Índice de concentración por wallet**: **{wallet_hhi:.1f}**/100
             - **Índice de concentración por blockchain**: **{chain_hhi:.1f}**/100
             - **Índice de concentración por categoría**: **{category_hhi:.1f}**/100
-            - **Coeficiente de variación**: **{coef_var}%** (dispersión de valores)
+            - **Coeficiente de variación**: **{coef_var:.1f}%** (dispersión de valores)
             - **Posiciones por blockchain**: **{positions_per_chain}** (promedio)
-
+        
             #### Distribución por Blockchain:
             {', '.join([f"**{chain}**: **{(value/total_value*100).round(1)}%**" for chain, value in chain_data.items()])}
             """)
-
         elif viz_type == 'positions':
             st.subheader("📋 Todas las Posiciones")
 
