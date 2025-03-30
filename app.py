@@ -10,6 +10,84 @@ from langchain.agents.agent_types import AgentType
 import os
 import matplotlib as mpl
 
+# Añade esto al inicio del archivo después de los imports
+from PIL import Image
+from io import BytesIO
+import base64
+import requests
+
+# URLs para los iconos (puedes reemplazarlas con tus propias imágenes)
+BOT_ICON_URL = "https://cdn-icons-png.flaticon.com/512/8649/8649595.png"
+USER_ICON_URL = "https://cdn-icons-png.flaticon.com/512/1077/1077114.png"
+
+# URLs para los iconos de botones
+WALLET_ICON_URL = "https://cdn-icons-png.flaticon.com/512/272/272415.png"
+BLOCKCHAIN_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2091/2091665.png"
+CATEGORY_ICON_URL = "https://cdn-icons-png.flaticon.com/512/3176/3176270.png"
+DASHBOARD_ICON_URL = "https://cdn-icons-png.flaticon.com/512/1828/1828765.png"
+POSITION_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2329/2329086.png"
+TOTAL_ICON_URL = "https://cdn-icons-png.flaticon.com/512/1621/1621635.png"
+
+# Función para cargar imágenes desde URL
+@st.cache_data
+def load_image_from_url(url):
+    try:
+        response = requests.get(url)
+        img = Image.open(BytesIO(response.content))
+        return img
+    except Exception as e:
+        st.error(f"Error loading image: {e}")
+        return None
+
+# Función para convertir imagen a base64 para CSS
+def img_to_base64(img):
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
+# Cargar iconos
+bot_icon = load_image_from_url(BOT_ICON_URL)
+user_icon = load_image_from_url(USER_ICON_URL)
+
+# Cargar iconos de botones
+wallet_icon = load_image_from_url(WALLET_ICON_URL)
+blockchain_icon = load_image_from_url(BLOCKCHAIN_ICON_URL)
+category_icon = load_image_from_url(CATEGORY_ICON_URL)
+dashboard_icon = load_image_from_url(DASHBOARD_ICON_URL)
+position_icon = load_image_from_url(POSITION_ICON_URL)
+total_icon = load_image_from_url(TOTAL_ICON_URL)
+
+# Función para crear botón personalizado con icono
+def icon_button(icon, label, key=None):
+    if icon:
+        icon_b64 = img_to_base64(icon)
+        button_html = f"""
+        <button class="custom-button" id="{key or label}">
+            <img src="data:image/png;base64,{icon_b64}" class="button-icon">
+            <span>{label}</span>
+        </button>
+        """
+        clicked = st.markdown(button_html, unsafe_allow_html=True)
+        
+        # JavaScript para detectar clics en el botón personalizado
+        js = f"""
+        <script>
+        document.getElementById("{key or label}").addEventListener("click", function() {{
+            window.parent.postMessage({{type: "streamlit:setComponentValue", value: "{key or label}"}}, "*");
+        }});
+        </script>
+        """
+        st.markdown(js, unsafe_allow_html=True)
+        
+        # Verificar si el botón fue clickeado
+        if st.session_state.get(f"button_{key or label}", False):
+            st.session_state[f"button_{key or label}"] = False
+            return True
+    else:
+        # Fallback a botón normal si no hay icono
+        return st.button(label, key=key)
+    return False
+    
 # Custom color palette
 PRIMARY_COLOR = "#A199DA"
 SECONDARY_COLOR = "#403680"
@@ -21,7 +99,6 @@ LOGO_URL = "https://corp.orwee.io/wp-content/uploads/2023/07/cropped-imageonline
 def create_custom_cmap():
     return mpl.colors.LinearSegmentedColormap.from_list("Rocky", [PRIMARY_COLOR, SECONDARY_COLOR])
 
-# Apply custom branding
 def apply_custom_branding():
     # Custom CSS with Rocky branding
     css = f"""
@@ -31,58 +108,78 @@ def apply_custom_branding():
             background-color: {BG_COLOR};
             color: white;
         }}
-        
+
         /* Header styling */
         h1, h2, h3, h4, h5, h6 {{
             font-family: 'IBM Plex Mono', monospace !important;
             color: {PRIMARY_COLOR};
         }}
-        
-        /* Streamlit components customization */
-        .stButton > button {{
-            background-color: {PRIMARY_COLOR};
-            color: black;
+
+        /* Custom button styling */
+        .custom-button {{
+            background-color: {SECONDARY_COLOR};
+            color: white;
             border: none;
+            border-radius: 4px;
+            padding: 10px 15px;
             font-family: 'IBM Plex Mono', monospace;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            width: 100%;
+            transition: background-color 0.3s;
         }}
-        
-        .stButton > button:hover {{
+
+        .custom-button:hover {{
             background-color: {PRIMARY_COLOR};
         }}
-        
+
+        .button-icon {{
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }}
+
+        /* Chat avatars */
+        .custom-avatar {{
+            border-radius: 50%;
+            border: 2px solid {PRIMARY_COLOR};
+        }}
+
         /* Sidebar styling */
         .css-1d391kg, .css-12oz5g7 {{
             background-color: {BG_COLOR};
         }}
-        
+
         /* Add your logo */
         .logo-container {{
             display: flex;
             align-items: center;
             margin-bottom: 20px;
         }}
-        
+
         .logo-container img {{
             height: 50px;
             margin-right: 10px;
         }}
-        
+
         .app-title {{
             font-family: 'IBM Plex Mono', monospace;
             font-weight: bold;
             font-size: 1.5em;
             color: {PRIMARY_COLOR};
         }}
-        
+
         /* Import IBM Plex Mono font */
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
-        
+
         /* Metrics and key figures */
         .metric-value {{
             color: {PRIMARY_COLOR};
             font-weight: bold;
         }}
-        
+
         /* Custom chart background */
         .chart-container {{
             background-color: rgba(43, 49, 78, 0.7);
@@ -93,7 +190,7 @@ def apply_custom_branding():
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
-    
+
     # Logo and title
     st.markdown(
         f"""
@@ -101,10 +198,10 @@ def apply_custom_branding():
             <img src="{LOGO_URL}" alt="Rocky Logo">
             <div class="app-title">Rocky - DeFi Portfolio Intelligence</div>
         </div>
-        """, 
+        """,
         unsafe_allow_html=True
     )
-
+    
 # Page configuration
 st.set_page_config(
     page_title="Rocky - DeFi Portfolio",
@@ -277,12 +374,12 @@ agent = setup_agent(df)
 
 # Sidebar for configuration
 with st.sidebar:
-    st.header("⚙️ Configuration")
+    st.header("Configuration")
 
     st.subheader("Quick Queries")
 
-    # Quick action buttons
-    if st.button("📊 Wallet Distribution"):
+    # Custom buttons with icons
+    if icon_button(wallet_icon, "Wallet Distribution", "wallet_dist"):
         response = get_conversational_response('wallet')
         st.session_state.messages.append({"role": "user", "content": "Show wallet distribution"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -292,7 +389,7 @@ with st.sidebar:
             'group_by': 'wallet'
         }
 
-    if st.button("🔗 Blockchain Analysis"):
+    if icon_button(blockchain_icon, "Blockchain Analysis", "blockchain_analysis"):
         response = get_conversational_response('chain')
         st.session_state.messages.append({"role": "user", "content": "Visualize my blockchain exposure"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -302,7 +399,7 @@ with st.sidebar:
             'group_by': 'chain'
         }
 
-    if st.button("💰 Token Categories"):
+    if icon_button(category_icon, "Token Categories", "token_categories"):
         response = get_conversational_response('category')
         st.session_state.messages.append({"role": "user", "content": "Distribution by token categories"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -312,7 +409,7 @@ with st.sidebar:
             'group_by': 'category'
         }
 
-    if st.button("🔄 Complete Dashboard"):
+    if icon_button(dashboard_icon, "Complete Dashboard", "complete_dashboard"):
         response = get_conversational_response('dashboard')
         st.session_state.messages.append({"role": "user", "content": "Show a complete dashboard"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -322,7 +419,7 @@ with st.sidebar:
             'group_by': None
         }
 
-    if st.button("📋 Show Positions"):
+    if icon_button(position_icon, "Show Positions", "show_positions"):
         response = get_conversational_response('positions')
         st.session_state.messages.append({"role": "user", "content": "Show all my positions"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -332,7 +429,7 @@ with st.sidebar:
             'group_by': None
         }
 
-    if st.button("💸 Total Value"):
+    if icon_button(total_icon, "Total Value", "total_value"):
         response = get_conversational_response('total')
         total_value = df['usd'].sum()
         st.session_state.messages.append({"role": "user", "content": "What's the total value of my portfolio?"})
@@ -364,7 +461,19 @@ def style_plot(ax):
 
 # Display chat history
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
+    if msg["role"] == "assistant":
+        avatar_img = bot_icon
+    else:
+        avatar_img = user_icon
+
+    # Convertir la imagen a base64
+    if avatar_img:
+        avatar_base64 = img_to_base64(avatar_img)
+        avatar_html = f'<img src="data:image/png;base64,{avatar_base64}" class="custom-avatar" width="40" height="40">'
+    else:
+        avatar_html = None
+
+    with st.chat_message(msg["role"], avatar=avatar_html if avatar_html else msg["role"]):
         st.write(msg["content"])
 
 # Visualization area (if activated)
