@@ -21,7 +21,7 @@ if 'messages' not in st.session_state:
         {"role": "assistant", "content": "Hola 👋 Soy tu asistente de análisis de portafolio cripto. ¿En qué puedo ayudarte hoy?"}
     ]
 
-if 'openai_api_key' not in st.session_state:
+if 'OPENAI_API_KEY' not in st.session_state:
     st.session_state.openai_api_key = None
 
 if 'show_visualization' not in st.session_state:
