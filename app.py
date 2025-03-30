@@ -234,7 +234,7 @@ def plot_portfolio_dashboard(plots_config, figsize=(12, 8), grid=(2, 2)):
 def setup_agent(_df):
     # Obtener API key
     try:
-        api_key = st.secrets["openai"]["api_key"]
+        api_key = st.secrets["OPENAI_API_KEY"]
     except:
         api_key = st.session_state.get('openai_api_key', None)
 
