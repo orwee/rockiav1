@@ -14,34 +14,22 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos CSS para el chat
-st.markdown("""
-<style>
-.chat-message {
-    padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem; display: flex;
-    flex-direction: row; align-items: center; gap: 0.75rem;
-}
-.chat-message.user {
-    background-color: #2b313e;
-}
-.chat-message.assistant {
-    background-color: #475063;
-}
-.chat-message .avatar {
-    width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; display: flex;
-    align-items: center; justify-content: center; font-size: 1.5rem;
-}
-.chat-message .avatar.user {
-    background-color: #19C37D;
-}
-.chat-message .avatar.assistant {
-    background-color: #9013FE;
-}
-.chat-message .message {
-    flex-grow: 1; padding-left: 0.5rem;
-}
-</style>
-""", unsafe_allow_html=True)
+# Inicializar estados de sesión
+if 'messages' not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Hola 👋 Soy tu asistente de análisis de portafolio cripto. ¿En qué puedo ayudarte hoy?"}
+    ]
+
+if 'openai_api_key' not in st.session_state:
+    st.session_state.openai_api_key = None
+
+if 'show_visualization' not in st.session_state:
+    st.session_state.show_visualization = {
+        'show': False,
+        'type': None,      # puede ser 'dashboard', 'bar', 'pie'
+        'group_by': None,  # wallet, chain, etc.
+        'data': None       # para almacenar DataFrame para tablas
+    }
 
 # Cargar datos del portafolio
 @st.cache_data
@@ -82,6 +70,9 @@ def load_portfolio_data():
     ]
     return pd.DataFrame(portfolio_data)
 
+# Cargar datos
+df = load_portfolio_data()
+
 # Clasificar tokens
 def classify_token(token):
     stablecoins = ['USDT', 'USDC', 'DAI', 'BUSD']
@@ -97,38 +88,7 @@ def classify_token(token):
 
     return 'Altcoin'
 
-# Inicializar estados de sesión
-if 'messages' not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "Hola 👋 Soy tu asistente de análisis de portafolio cripto. ¿En qué puedo ayudarte hoy?"}
-    ]
-
-if 'new_message' not in st.session_state:
-    st.session_state.new_message = False
-
-if 'openai_api_key' not in st.session_state:
-    st.session_state.openai_api_key = None
-
-# Cargar datos
-df = load_portfolio_data()
 df['category'] = df['token'].apply(classify_token)
-
-# Función para mostrar mensajes de chat
-def display_chat_message(role, content):
-    if role == "user":
-        st.markdown(f"""
-        <div class="chat-message user">
-            <div class="avatar user">👤</div>
-            <div class="message">{content}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-        <div class="chat-message assistant">
-            <div class="avatar assistant">🤖</div>
-            <div class="message">{content}</div>
-        </div>
-        """, unsafe_allow_html=True)
 
 # Configurar el agente de LangChain
 @st.cache_resource
@@ -156,171 +116,8 @@ def setup_agent(_df):
         st.error(f"Error al configurar el agente: {e}")
         return None
 
-# Función para visualización
-def plot_portfolio(group_by=None, measure='usd', agg_func='sum', chart_type='bar',
-                  sort_values=True, ascending=False, title=None, figsize=(10, 5)):
-    fig, ax = plt.subplots(figsize=figsize)
-
-    if group_by is None:
-        data = df
-        x = df.columns[0]
-        y = measure
-    else:
-        if agg_func == 'sum':
-            data = df.groupby(group_by)[measure].sum()
-        elif agg_func == 'mean':
-            data = df.groupby(group_by)[measure].mean()
-        elif agg_func == 'count':
-            data = df.groupby(group_by)[measure].count()
-        else:
-            data = getattr(df.groupby(group_by)[measure], agg_func)()
-
-        if sort_values:
-            data = data.sort_values(ascending=ascending)
-
-    if title is None:
-        agg_name = {'sum': 'Suma', 'mean': 'Promedio', 'count': 'Conteo'}.get(agg_func, agg_func)
-        measure_name = measure.upper()
-        group_name = group_by.capitalize() if group_by else "Sin agrupar"
-        title = f"{agg_name} de {measure_name} por {group_name}"
-
-    if chart_type == 'pie':
-        data.plot(kind='pie', autopct='%1.1f%%', title=title, ax=ax)
-        ax.axis('equal')
-    elif chart_type == 'bar':
-        if group_by is None:
-            sns.barplot(x=x, y=y, data=data, ax=ax)
-            ax.set_title(title)
-        else:
-            data.plot(kind='bar', title=title, ax=ax)
-            ax.set_xlabel(group_by)
-            ax.set_ylabel(measure)
-    else:
-        data.plot(kind=chart_type, title=title, ax=ax)
-
-    ax.tick_params(axis='x', rotation=45)
-    plt.tight_layout()
-
-    return fig, data
-
-# Función para dashboard
-def plot_portfolio_dashboard():
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    axes = axes.flatten()
-
-    # Gráfico 1: Pie chart de wallets
-    data = df.groupby('wallet')['usd'].sum()
-    data.plot(kind='pie', autopct='%1.1f%%', title="Distribución por Wallet", ax=axes[0])
-    axes[0].axis('equal')
-
-    # Gráfico 2: Bar chart de blockchains
-    data = df.groupby('chain')['usd'].sum().sort_values(ascending=False)
-    data.plot(kind='bar', title="USD por Blockchain", ax=axes[1])
-    axes[1].set_xlabel('chain')
-    axes[1].set_ylabel('usd')
-
-    # Gráfico 3: Pie chart de categorías
-    data = df.groupby('category')['usd'].sum()
-    data.plot(kind='pie', autopct='%1.1f%%', title="Distribución por Categoría", ax=axes[2])
-    axes[2].axis('equal')
-
-    # Gráfico 4: Bar chart de protocolos
-    data = df.groupby('protocol')['usd'].sum().sort_values(ascending=False)
-    data.plot(kind='bar', title="USD por Protocolo", ax=axes[3])
-    axes[3].set_xlabel('protocol')
-    axes[3].set_ylabel('usd')
-
-    for ax in axes:
-        ax.tick_params(axis='x', rotation=45)
-
-    plt.tight_layout()
-    return fig
-
-def add_user_message():
-    st.session_state.messages.append({"role": "user", "content": st.session_state.input_value})
-    st.session_state.input_value = ""
-    st.session_state.new_message = True
-
-def handle_quick_query(query):
-    st.session_state.messages.append({"role": "user", "content": query})
-    st.session_state.new_message = True
-
-# Función para procesar la consulta del usuario
-def process_query(query, agent):
-    query_lower = query.lower()
-
-    # Términos para detectar consultas de visualización
-    viz_terms = ["gráfico", "grafico", "visualiza", "visualizar", "mostrar",
-                "ver", "distribución", "distribucion", "dashboard"]
-
-    is_viz_query = any(term in query_lower for term in viz_terms)
-
-    # Variables de agrupación
-    group_vars = {
-        "wallet": "wallet", "billetera": "wallet",
-        "blockchain": "chain", "chain": "chain", "cadena": "chain",
-        "categoria": "category", "categoría": "category", "tipo de token": "category",
-        "protocolo": "protocol", "protocol": "protocol",
-        "token": "token"
-    }
-
-    group_by = None
-    for term, var in group_vars.items():
-        if term in query_lower:
-            group_by = var
-            break
-
-    # Si es consulta de visualización
-    if is_viz_query:
-        response_text = ""
-        viz_container = st.container()
-
-        with viz_container:
-            if group_by:
-                # Si se especifica una variable, mostrar gráficos específicos
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    st.subheader(f"Distribución por {group_by.capitalize()}")
-                    fig1, data = plot_portfolio(group_by=group_by, chart_type="bar")
-                    st.pyplot(fig1)
-
-                with col2:
-                    st.subheader(f"Proporción por {group_by.capitalize()}")
-                    fig2, _ = plot_portfolio(group_by=group_by, chart_type="pie")
-                    st.pyplot(fig2)
-
-                # Datos en tabla
-                if isinstance(data, pd.Series):
-                    total = data.sum()
-                    data_df = pd.DataFrame({
-                        group_by.capitalize(): data.index,
-                        "USD": data.values.round(2),
-                        "Porcentaje (%)": [(v/total*100).round(2) for v in data.values]
-                    })
-                    st.dataframe(data_df, use_container_width=True, hide_index=True)
-
-                response_text = f"Aquí tienes las visualizaciones de la distribución por {group_by}."
-            else:
-                # Si no se especifica, mostrar dashboard general
-                st.subheader("Dashboard General del Portafolio")
-                fig = plot_portfolio_dashboard()
-                st.pyplot(fig)
-
-                # Total del portafolio
-                total_value = df['usd'].sum()
-                st.metric("Valor Total del Portafolio", f"${total_value:.2f}")
-
-                response_text = "Aquí tienes un dashboard general de tu portafolio."
-
-        return response_text
-    else:
-        # Para consultas no visuales, usar el agente
-        try:
-            response = agent.run(query)
-            return response
-        except Exception as e:
-            return f"Error al procesar tu consulta: {str(e)}"
+# Crear agente
+agent = setup_agent(df)
 
 # Título principal
 st.title("💬 Asistente de Portafolio Cripto")
@@ -338,61 +135,208 @@ with st.sidebar:
 
     if api_key_input:
         st.session_state.openai_api_key = api_key_input
+        agent = setup_agent(df)
 
     st.subheader("Consultas Rápidas")
 
     # Botones de acciones rápidas
     if st.button("📊 Distribución por Wallet"):
-        handle_quick_query("Muestra la distribución por wallet")
+        st.session_state.messages.append({"role": "user", "content": "Muestra la distribución por wallet"})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'specific',
+            'group_by': 'wallet'
+        }
 
     if st.button("🔗 Análisis por Blockchain"):
-        handle_quick_query("Visualiza mi exposición por blockchain")
+        st.session_state.messages.append({"role": "user", "content": "Visualiza mi exposición por blockchain"})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'specific',
+            'group_by': 'chain'
+        }
 
     if st.button("💰 Categorías de Token"):
-        handle_quick_query("Distribución por categorías de token")
+        st.session_state.messages.append({"role": "user", "content": "Distribución por categorías de token"})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'specific',
+            'group_by': 'category'
+        }
+
+    if st.button("🔄 Dashboard Completo"):
+        st.session_state.messages.append({"role": "user", "content": "Muestra un dashboard completo"})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'dashboard'
+        }
 
     if st.button("💸 Valor Total"):
-        handle_quick_query("¿Cuál es el valor total de mi portafolio?")
+        st.session_state.messages.append({"role": "user", "content": "¿Cuál es el valor total de mi portafolio?"})
+        # No mostrar visualización para esta consulta
 
     st.markdown("---")
-    st.caption("Este asistente analiza tu portafolio de criptomonedas y genera visualizaciones automáticamente.")
+    st.caption("Este asistente analiza tu portafolio de criptomonedas y genera visualizaciones.")
 
-# Configurar el agente
-agent = setup_agent(df)
+# Mostrar chat
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.write(msg["content"])
 
-# Mostrar historial de mensajes
-chat_container = st.container()
-with chat_container:
-    for message in st.session_state.messages:
-        display_chat_message(message["role"], message["content"])
+# Área de visualización (si está activada)
+if st.session_state.show_visualization['show']:
+    viz_type = st.session_state.show_visualization['type']
+    group_by = st.session_state.show_visualization['group_by']
 
-# Area para entrada de texto
-st.text_input(
-    "Escribe tu mensaje:",
-    placeholder="Ej: Muestra la distribución por wallet o ¿Cuánto tengo invertido en stablecoins?",
-    key="input_value",
-    on_change=add_user_message
-)
+    viz_container = st.container()
 
-# Procesar la respuesta si hay un nuevo mensaje
-if st.session_state.new_message:
-    # Obtener el último mensaje del usuario
-    last_user_message = st.session_state.messages[-1]["content"]
-    
-    # Verificar si tenemos un agente configurado, si no, intentar configurarlo
-    if not agent and st.session_state.openai_api_key:
-        agent = setup_agent(df)
-    
-    if agent:
-        with st.spinner("Procesando..."):
-            response = process_query(last_user_message, agent)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+    with viz_container:
+        if viz_type == 'specific' and group_by:
+            st.subheader(f"Visualización por {group_by.capitalize()}")
+
+            # Agregar datos
+            grouped_data = df.groupby(group_by)['usd'].sum()
+            total = grouped_data.sum()
+
+            # Gráficos
+            col1, col2 = st.columns(2)
+
+            with col1:
+                fig, ax = plt.subplots(figsize=(8, 5))
+                grouped_data.plot(kind='bar', ax=ax)
+                ax.set_title(f"USD por {group_by.capitalize()}")
+                ax.set_xlabel(group_by)
+                ax.set_ylabel("USD")
+                st.pyplot(fig)
+
+            with col2:
+                fig, ax = plt.subplots(figsize=(8, 5))
+                grouped_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
+                ax.set_title(f"Distribución por {group_by.capitalize()}")
+                ax.axis('equal')
+                st.pyplot(fig)
+
+            # Tabla de datos
+            data_df = pd.DataFrame({
+                group_by.capitalize(): grouped_data.index,
+                "USD": grouped_data.values.round(2),
+                "Porcentaje (%)": [(v/total*100).round(2) for v in grouped_data.values]
+            })
+            st.dataframe(data_df, hide_index=True)
+
+        elif viz_type == 'dashboard':
+            st.subheader("Dashboard del Portafolio")
+
+            # Primera fila: métricas generales
+            total_value = df['usd'].sum()
+            avg_value = df['usd'].mean()
+            unique_chains = df['chain'].nunique()
+
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Valor Total", f"${total_value:.2f}")
+            col2.metric("Promedio por Inversión", f"${avg_value:.2f}")
+            col3.metric("Blockchains", f"{unique_chains}")
+
+            # Segunda fila: visualizaciones principales
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Gráfico de Wallet
+                fig, ax = plt.subplots(figsize=(8, 5))
+                wallet_data = df.groupby('wallet')['usd'].sum()
+                wallet_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
+                ax.set_title("Distribución por Wallet")
+                ax.axis('equal')
+                st.pyplot(fig)
+
+            with col2:
+                # Gráfico de Chain
+                fig, ax = plt.subplots(figsize=(8, 5))
+                chain_data = df.groupby('chain')['usd'].sum().sort_values(ascending=False)
+                chain_data.plot(kind='bar', ax=ax)
+                ax.set_title("USD por Blockchain")
+                ax.set_xlabel("Chain")
+                ax.set_ylabel("USD")
+                st.pyplot(fig)
+
+            # Tercera fila
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Gráfico de Categoría
+                fig, ax = plt.subplots(figsize=(8, 5))
+                cat_data = df.groupby('category')['usd'].sum()
+                cat_data.plot(kind='pie', autopct='%1.1f%%', ax=ax)
+                ax.set_title("Distribución por Categoría")
+                ax.axis('equal')
+                st.pyplot(fig)
+
+            with col2:
+                # Gráfico de Protocolo
+                fig, ax = plt.subplots(figsize=(8, 5))
+                protocol_data = df.groupby('protocol')['usd'].sum().sort_values(ascending=False)
+                protocol_data.plot(kind='bar', ax=ax)
+                ax.set_title("USD por Protocolo")
+                ax.set_xlabel("Protocolo")
+                ax.set_ylabel("USD")
+                st.pyplot(fig)
+
+# Entrada de usuario
+prompt = st.chat_input("Escribe tu consulta...")
+
+if prompt:
+    # Añadir mensaje del usuario
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # Analizar la consulta para determinar si es de visualización
+    query_lower = prompt.lower()
+    viz_terms = ["gráfico", "grafico", "visualiza", "visualizar", "mostrar", "ver", "distribución", "distribucion", "dashboard"]
+    is_viz_query = any(term in query_lower for term in viz_terms)
+
+    # Variables de agrupación
+    group_vars = {
+        "wallet": "wallet", "billetera": "wallet",
+        "blockchain": "chain", "chain": "chain", "cadena": "chain",
+        "categoria": "category", "categoría": "category", "tipo de token": "category",
+        "protocolo": "protocol", "protocol": "protocol",
+        "token": "token"
+    }
+
+    group_by = None
+    for term, var in group_vars.items():
+        if term in query_lower:
+            group_by = var
+            break
+
+    # Decidir si mostrar visualización
+    if is_viz_query:
+        if group_by:
+            st.session_state.show_visualization = {
+                'show': True,
+                'type': 'specific',
+                'group_by': group_by
+            }
+            asst_response = f"Aquí tienes la visualización de la distribución por {group_by}:"
+        else:
+            st.session_state.show_visualization = {
+                'show': True,
+                'type': 'dashboard'
+            }
+            asst_response = "Aquí tienes un dashboard con diferentes visualizaciones de tu portafolio:"
     else:
-        st.session_state.messages.append({
-            "role": "assistant", 
-            "content": "Por favor, configura una API key válida para usar el asistente."
-        })
-    
-    # Marcar como procesado
-    st.session_state.new_message = False
+        # No mostrar visualización, usar el agente para responder
+        st.session_state.show_visualization['show'] = False
+
+        if agent:
+            try:
+                asst_response = agent.run(prompt)
+            except Exception as e:
+                asst_response = f"Error al procesar tu consulta: {str(e)}"
+        else:
+            asst_response = "No puedo responder sin una API key válida. Por favor, configura la API key en la barra lateral."
+
+    # Añadir respuesta del asistente
+    st.session_state.messages.append({"role": "assistant", "content": asst_response})
+
+    # Recargar para mostrar la respuesta completa
     st.rerun()
