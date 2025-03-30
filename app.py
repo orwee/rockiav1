@@ -25,7 +25,7 @@ st.markdown("---")
 # Sidebar para opciones
 st.sidebar.header("Opciones")
 
-# Opción para introducir API Key
+# Opción para introducir API Key (como fallback)
 openai_api_key = st.sidebar.text_input("OpenAI API Key (opcional)", type="password")
 
 # Datos del portafolio
@@ -425,34 +425,34 @@ def generate_complete_analysis():
 
 # Configuración del agente de LangChain
 @st.cache_resource
-def setup_agent(_df, api_key=None):
-    if api_key:
-        llm = ChatOpenAI(temperature=0, model="gpt-4o-mini", api_key=api_key)
-    else:
-        # Usar valor predeterminado de la variable de entorno si existe
-        llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+def setup_agent(_df):
+    # Intentar obtener la API key de las secrets de Streamlit
+    try:
+        api_key = st.secrets["openai"]["api_key"]
+    except:
+        # Si no hay secreto, usar valor de entrada o variable de entorno
+        api_key = openai_api_key
 
     try:
+        llm = ChatOpenAI(temperature=0, model="gpt-4o-mini", api_key=api_key)
         agent = create_pandas_dataframe_agent(
             llm,
             _df,
             verbose=True,
             agent_type=AgentType.OPENAI_FUNCTIONS,
             handle_parsing_errors=True,
-            allow_dangerous_code=True
+            allow_dangerous_code=True  # Añadido para permitir ejecución de código completo
         )
         return agent
     except Exception as e:
         st.error(f"Error al configurar el agente LangChain: {e}")
         return None
 
-# Inicializar agente si hay una API Key
-agent = None
-if openai_api_key:
-    with st.spinner("Configurando asistente de LangChain..."):
-        agent = setup_agent(df, openai_api_key)
-        if agent:
-            st.sidebar.success("¡Asistente LangChain listo!")
+# Inicializar agente
+with st.spinner("Configurando asistente de LangChain..."):
+    agent = setup_agent(df)
+    if agent:
+        st.sidebar.success("¡Asistente LangChain listo!")
 
 # Pestañas principales de la aplicación
 tab1, tab2, tab3 = st.tabs(["Análisis Rápido", "Visualizaciones Personalizadas", "Asistente AI"])
@@ -579,16 +579,17 @@ with tab2:
 with tab3:
     st.header("🤖 Asistente AI para Análisis")
 
-    if not agent and not openai_api_key:
-        st.warning("Introduce tu OpenAI API Key en el panel lateral para activar el asistente AI.")
+    if not agent:
+        st.warning("No se pudo inicializar el asistente AI. Verifica que las API keys estén configuradas correctamente.")
     else:
         st.markdown("""
         Puedes hacer preguntas en lenguaje natural sobre tu portafolio. Por ejemplo:
         - ¿Cuál es el valor total de mi portafolio en USD?
         - ¿Cuál es el valor promedio por inversión?
         - ¿Cuánto tengo invertido en la blockchain base?
-        - ¿Qué porcentaje de mi portafolio está en stablecoins?
-        - ¿Cuál es la distribución de mis activos por categoría?
+        - Muestra la distribución por wallet
+        - Visualizar categorías de tokens
+        - Ver distribución por blockchain
         """)
 
         user_query = st.text_input("Escribe tu consulta:")
@@ -599,7 +600,8 @@ with tab3:
                     # Procesar la consulta
                     if any(term in user_query.lower() for term in [
                         "gráfico", "grafico", "visualiza", "visualizar",
-                        "mostrar", "dibujar", "generar gráfico"
+                        "mostrar", "dibujar", "generar gráfico", "distribución",
+                        "distribucion", "ver", "análisis", "analisis"
                     ]):
                         # Determinar variable de agrupación
                         group_by = None
@@ -619,61 +621,50 @@ with tab3:
                                 group_by = var
                                 break
 
-                        # Determinar tipo de gráfico
-                        chart_type = "bar"  # Valor predeterminado
-                        for term, type_val in {
-                            "torta": "pie",
-                            "circular": "pie",
-                            "pie": "pie",
-                            "barras": "bar",
-                            "bar": "bar",
-                            "línea": "line",
-                            "linea": "line",
-                            "line": "line",
-                            "área": "area",
-                            "area": "area"
-                        }.items():
-                            if term in user_query.lower():
-                                chart_type = type_val
-                                break
-
-                        # Determinar medida y agregación
-                        agg_func = "sum"  # Valor predeterminado
-                        for term, func in {
-                            "promedio": "mean",
-                            "media": "mean",
-                            "mean": "mean",
-                            "avg": "mean",
-                            "contar": "count",
-                            "count": "count",
-                            "cantidad": "count",
-                            "máximo": "max",
-                            "maximo": "max",
-                            "max": "max",
-                            "mínimo": "min",
-                            "minimo": "min",
-                            "min": "min"
-                        }.items():
-                            if term in user_query.lower():
-                                agg_func = func
-                                break
-
-                        st.markdown(f"#### Visualización: {chart_type.capitalize()} de {agg_func} USD por {group_by}")
-
                         if group_by:
-                            fig, data = plot_portfolio(
-                                group_by=group_by,
-                                chart_type=chart_type,
-                                agg_func=agg_func
-                            )
-                            st.pyplot(fig)
+                            # Si se identifica una agrupación, mostrar múltiples visualizaciones para esa variable
+                            st.markdown(f"### Visualizaciones para {group_by}")
+
+                            # Crear tabs para diferentes visualizaciones
+                            viz_tabs = st.tabs(["Gráfico de Barras", "Gráfico Circular", "Datos"])
+
+                            with viz_tabs[0]:
+                                fig, data = plot_portfolio(
+                                    group_by=group_by,
+                                    chart_type="bar",
+                                    agg_func="sum",
+                                    title=f"Distribución de USD por {group_by}"
+                                )
+                                st.pyplot(fig)
+
+                            with viz_tabs[1]:
+                                fig, data = plot_portfolio(
+                                    group_by=group_by,
+                                    chart_type="pie",
+                                    agg_func="sum",
+                                    title=f"Porcentaje por {group_by}"
+                                )
+                                st.pyplot(fig)
+
+                            with viz_tabs[2]:
+                                # Mostrar datos en formato de tabla
+                                if isinstance(data, pd.Series):
+                                    # Convertir Series a DataFrame
+                                    data_df = pd.DataFrame({
+                                        group_by: data.index,
+                                        "USD": data.values,
+                                        "Porcentaje (%)": [(v/data.sum())*100 for v in data.values]
+                                    })
+                                    st.dataframe(data_df, use_container_width=True, hide_index=True)
+                                else:
+                                    st.dataframe(data, use_container_width=True)
                         else:
                             # Si no se específica agrupación, mostrar dashboard múltiple
-                            st.markdown("#### Dashboard con múltiples visualizaciones")
+                            st.markdown("### Dashboard con múltiples visualizaciones")
                             plots_config = [
-                                {"group_by": "wallet", "chart_type": "pie", "position": 1},
-                                {"group_by": "chain", "chart_type": "bar", "position": 2},
-                                {"group_by": "category", "chart_type": "pie", "position": 3}
+                                {"group_by": "wallet", "chart_type": "pie", "position": 1, "title": "Distribución por Wallet"},
+                                {"group_by": "chain", "chart_type": "bar", "position": 2, "title": "USD por Blockchain"},
+                                {"group_by": "category", "chart_type": "pie", "position": 3, "title": "Distribución por Categoría"}
                             ]
                             fig, _ = plot_portfolio_dashboard(plots_config, figsize=(12, 8))
                             st.pyplot(fig)
