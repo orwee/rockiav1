@@ -103,8 +103,8 @@ if 'messages' not in st.session_state:
         {"role": "assistant", "content": "Hola 👋 Soy tu asistente de análisis de portafolio cripto. ¿En qué puedo ayudarte hoy?"}
     ]
 
-if 'processing' not in st.session_state:
-    st.session_state.processing = False
+if 'new_message' not in st.session_state:
+    st.session_state.new_message = False
 
 if 'openai_api_key' not in st.session_state:
     st.session_state.openai_api_key = None
@@ -158,7 +158,7 @@ def setup_agent(_df):
 
 # Función para visualización
 def plot_portfolio(group_by=None, measure='usd', agg_func='sum', chart_type='bar',
-                 sort_values=True, ascending=False, title=None, figsize=(10, 5)):
+                  sort_values=True, ascending=False, title=None, figsize=(10, 5)):
     fig, ax = plt.subplots(figsize=figsize)
 
     if group_by is None:
@@ -235,6 +235,15 @@ def plot_portfolio_dashboard():
 
     plt.tight_layout()
     return fig
+
+def add_user_message():
+    st.session_state.messages.append({"role": "user", "content": st.session_state.input_value})
+    st.session_state.input_value = ""
+    st.session_state.new_message = True
+
+def handle_quick_query(query):
+    st.session_state.messages.append({"role": "user", "content": query})
+    st.session_state.new_message = True
 
 # Función para procesar la consulta del usuario
 def process_query(query, agent):
@@ -334,23 +343,22 @@ with st.sidebar:
 
     # Botones de acciones rápidas
     if st.button("📊 Distribución por Wallet"):
-        st.session_state.messages.append({"role": "user", "content": "Muestra la distribución por wallet"})
-        st.session_state.processing = True
+        handle_quick_query("Muestra la distribución por wallet")
 
     if st.button("🔗 Análisis por Blockchain"):
-        st.session_state.messages.append({"role": "user", "content": "Visualiza mi exposición por blockchain"})
-        st.session_state.processing = True
+        handle_quick_query("Visualiza mi exposición por blockchain")
 
     if st.button("💰 Categorías de Token"):
-        st.session_state.messages.append({"role": "user", "content": "Distribución por categorías de token"})
-        st.session_state.processing = True
+        handle_quick_query("Distribución por categorías de token")
 
     if st.button("💸 Valor Total"):
-        st.session_state.messages.append({"role": "user", "content": "¿Cuál es el valor total de mi portafolio?"})
-        st.session_state.processing = True
+        handle_quick_query("¿Cuál es el valor total de mi portafolio?")
 
     st.markdown("---")
     st.caption("Este asistente analiza tu portafolio de criptomonedas y genera visualizaciones automáticamente.")
+
+# Configurar el agente
+agent = setup_agent(df)
 
 # Mostrar historial de mensajes
 chat_container = st.container()
@@ -358,47 +366,33 @@ with chat_container:
     for message in st.session_state.messages:
         display_chat_message(message["role"], message["content"])
 
-# Configurar el agente
-agent = setup_agent(df)
-
 # Area para entrada de texto
-col1, col2 = st.columns([6, 1])
-with col1:
-    user_input = st.text_input(
-        "Escribe tu mensaje:",
-        placeholder="Ej: Muestra la distribución por wallet o ¿Cuánto tengo invertido en stablecoins?",
-        key="user_input",
-        label_visibility="collapsed"
-    )
-with col2:
-    send_button = st.button("Enviar")
+st.text_input(
+    "Escribe tu mensaje:",
+    placeholder="Ej: Muestra la distribución por wallet o ¿Cuánto tengo invertido en stablecoins?",
+    key="input_value",
+    on_change=add_user_message
+)
 
-# Manejar entrada del usuario
-if send_button and user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    st.session_state.processing = True
-    st.experimental_rerun()
-
-# Procesar la respuesta si está pendiente
-if st.session_state.processing:
+# Procesar la respuesta si hay un nuevo mensaje
+if st.session_state.new_message:
+    # Obtener el último mensaje del usuario
+    last_user_message = st.session_state.messages[-1]["content"]
+    
+    # Verificar si tenemos un agente configurado, si no, intentar configurarlo
     if not agent and st.session_state.openai_api_key:
         agent = setup_agent(df)
-
+    
     if agent:
-        # Procesar la última consulta
-        last_user_message = next((m["content"] for m in reversed(st.session_state.messages)
-                               if m["role"] == "user"), None)
-
-        if last_user_message:
-            with st.spinner("Procesando..."):
-                response = process_query(last_user_message, agent)
-                st.session_state.messages.append({"role": "assistant", "content": response})
+        with st.spinner("Procesando..."):
+            response = process_query(last_user_message, agent)
+            st.session_state.messages.append({"role": "assistant", "content": response})
     else:
         st.session_state.messages.append({
-            "role": "assistant",
+            "role": "assistant", 
             "content": "Por favor, configura una API key válida para usar el asistente."
         })
-
-    # Marcar como procesado para evitar bucles
-    st.session_state.processing = False
-    st.experimental_rerun()
+    
+    # Marcar como procesado
+    st.session_state.new_message = False
+    st.rerun()
