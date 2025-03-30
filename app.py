@@ -127,8 +127,9 @@ def apply_custom_branding():
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
-
-    # Logo and title
+        # Main content area
+    st.title("DeFi Portfolio Intelligence")
+    # Logo and title in sidebar
     st.markdown(
         f"""
         <div class="logo-container">
@@ -138,6 +139,8 @@ def apply_custom_branding():
         """,
         unsafe_allow_html=True
     )
+    
+    st.markdown("---")  # Separador después del logo
 
 # Page configuration
 st.set_page_config(
@@ -152,7 +155,7 @@ apply_custom_branding()
 # Initialize session states
 if 'messages' not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hello! I'm your DeFi portfolio assistant. How can I help you today?"}
+        {"role": "assistant", "content": "Hello! I'm Rocky, your DeFi portfolio assistant built with OI (Orwee Intelligence). How can I help you today?"}
     ]
 
 if 'show_visualization' not in st.session_state:
