@@ -21,18 +21,6 @@ BG_COLOR = "#2B314E"
 ACCENT_COLOR = "#A199DA"
 LOGO_URL = "https://corp.orwee.io/wp-content/uploads/2023/07/cropped-imageonline-co-transparentimage-23-e1689783905238.webp"
 
-# URLs para los iconos
-BOT_ICON_URL = "https://cdn-icons-png.flaticon.com/512/8649/8649595.png"
-USER_ICON_URL = "https://cdn-icons-png.flaticon.com/512/1077/1077114.png"
-
-# URLs para los iconos de botones
-WALLET_ICON_URL = "https://cdn-icons-png.flaticon.com/512/272/272415.png"
-BLOCKCHAIN_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2091/2091665.png"
-CATEGORY_ICON_URL = "https://cdn-icons-png.flaticon.com/512/3176/3176270.png"
-DASHBOARD_ICON_URL = "https://cdn-icons-png.flaticon.com/512/1828/1828765.png"
-POSITION_ICON_URL = "https://cdn-icons-png.flaticon.com/512/2329/2329086.png"
-TOTAL_ICON_URL = "https://cdn-icons-png.flaticon.com/512/1621/1621635.png"
-
 # Función para cargar imágenes desde URL
 @st.cache_data
 def load_image(url):
@@ -43,12 +31,6 @@ def load_image(url):
     except Exception as e:
         st.error(f"Error loading image: {e}")
         return None
-
-# Función para convertir imagen a base64 para HTML
-def img_to_base64(img):
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
 
 # Create custom sequential color palette for charts
 def create_custom_cmap():
@@ -71,7 +53,7 @@ def apply_custom_branding():
             color: {PRIMARY_COLOR};
         }}
 
-        /* Custom icon buttons */
+        /* Custom button styling */
         .stButton > button {{
             background-color: {SECONDARY_COLOR} !important;
             color: white !important;
@@ -87,14 +69,6 @@ def apply_custom_branding():
 
         .stButton > button:hover {{
             background-color: {PRIMARY_COLOR} !important;
-        }}
-
-        /* Custom button icon */
-        .button-icon {{
-            margin-right: 10px;
-            vertical-align: middle;
-            width: 20px;
-            height: 20px;
         }}
 
         /* Sidebar styling */
@@ -138,7 +112,7 @@ def apply_custom_branding():
             border-radius: 5px;
             border: 1px solid {PRIMARY_COLOR};
         }}
-        
+
         /* Custom chat avatars */
         .chat-avatar {{
             border-radius: 50%;
@@ -165,29 +139,17 @@ def apply_custom_branding():
 # Page configuration
 st.set_page_config(
     page_title="Rocky - DeFi Portfolio",
-    page_icon="🚀",
+    page_icon="📊",
     layout="wide"
 )
 
 # Apply branding
 apply_custom_branding()
 
-# Cargar imágenes de avatares
-bot_icon = load_image(BOT_ICON_URL)
-user_icon = load_image(USER_ICON_URL)
-
-# Cargar iconos para botones
-wallet_icon = load_image(WALLET_ICON_URL)
-blockchain_icon = load_image(BLOCKCHAIN_ICON_URL) 
-category_icon = load_image(CATEGORY_ICON_URL)
-dashboard_icon = load_image(DASHBOARD_ICON_URL)
-position_icon = load_image(POSITION_ICON_URL)
-total_icon = load_image(TOTAL_ICON_URL)
-
 # Initialize session states
 if 'messages' not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hello 👋 I'm your DeFi portfolio assistant. How can I help you today?"}
+        {"role": "assistant", "content": "Hello! I'm your DeFi portfolio assistant. How can I help you today?"}
     ]
 
 if 'show_visualization' not in st.session_state:
@@ -344,87 +306,6 @@ def setup_agent(_df):
 # Configure agent
 agent = setup_agent(df)
 
-# Helper function for custom icon buttons
-def custom_button(label, icon_img=None, key=None):
-    if icon_img:
-        icon_base64 = img_to_base64(icon_img)
-        button_label = f'<img src="data:image/png;base64,{icon_base64}" class="button-icon"> {label}'
-    else:
-        button_label = label
-    
-    return st.button(button_label, key=key, use_container_width=True, help=label, unsafe_allow_html=True)
-
-# Sidebar for configuration
-with st.sidebar:
-    st.header("Configuration")
-
-    st.subheader("Quick Queries")
-
-    # Custom buttons with icons
-    if custom_button("Wallet Distribution", wallet_icon, "wallet_dist"):
-        response = get_conversational_response('wallet')
-        st.session_state.messages.append({"role": "user", "content": "Show wallet distribution"})
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.session_state.show_visualization = {
-            'show': True,
-            'type': 'specific',
-            'group_by': 'wallet'
-        }
-
-    if custom_button("Blockchain Analysis", blockchain_icon, "blockchain_analysis"):
-        response = get_conversational_response('chain')
-        st.session_state.messages.append({"role": "user", "content": "Visualize my blockchain exposure"})
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.session_state.show_visualization = {
-            'show': True,
-            'type': 'specific',
-            'group_by': 'chain'
-        }
-
-    if custom_button("Token Categories", category_icon, "token_categories"):
-        response = get_conversational_response('category')
-        st.session_state.messages.append({"role": "user", "content": "Distribution by token categories"})
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.session_state.show_visualization = {
-            'show': True,
-            'type': 'specific',
-            'group_by': 'category'
-        }
-
-    if custom_button("Complete Dashboard", dashboard_icon, "complete_dashboard"):
-        response = get_conversational_response('dashboard')
-        st.session_state.messages.append({"role": "user", "content": "Show a complete dashboard"})
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.session_state.show_visualization = {
-            'show': True,
-            'type': 'dashboard',
-            'group_by': None
-        }
-
-    if custom_button("Show Positions", position_icon, "show_positions"):
-        response = get_conversational_response('positions')
-        st.session_state.messages.append({"role": "user", "content": "Show all my positions"})
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.session_state.show_visualization = {
-            'show': True,
-            'type': 'positions',
-            'group_by': None
-        }
-
-    if custom_button("Total Value", total_icon, "total_value"):
-        response = get_conversational_response('total')
-        total_value = df['usd'].sum()
-        st.session_state.messages.append({"role": "user", "content": "What's the total value of my portfolio?"})
-        st.session_state.messages.append({"role": "assistant", "content": f"{response} ${total_value:.2f} USD"})
-        st.session_state.show_visualization = {
-            'show': False,
-            'type': None,
-            'group_by': None
-        }
-
-    st.markdown("---")
-    st.caption("This assistant analyzes your cryptocurrency portfolio and generates visualizations.")
-
 # Configure plot style for all visualizations
 plt.style.use('dark_background')
 custom_cmap = create_custom_cmap()
@@ -441,23 +322,105 @@ def style_plot(ax):
         spine.set_color(ACCENT_COLOR)
     return ax
 
-# Custom chat messages with avatars
-def custom_chat_message(role, content):
-    if role == "assistant" and bot_icon:
-        icon_b64 = img_to_base64(bot_icon)
-        avatar_html = f'<img src="data:image/png;base64,{icon_b64}" class="chat-avatar">'
-    elif role == "user" and user_icon:
-        icon_b64 = img_to_base64(user_icon)
-        avatar_html = f'<img src="data:image/png;base64,{icon_b64}" class="chat-avatar">'
+# Sidebar for configuration
+with st.sidebar:
+    st.header("Configuration")
+
+    st.subheader("Quick Queries")
+
+    # Buttons with labels (simplified approach without custom icons in button)
+    if st.button("Wallet Distribution", key="wallet_dist", use_container_width=True):
+        response = get_conversational_response('wallet')
+        st.session_state.messages.append({"role": "user", "content": "Show wallet distribution"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'specific',
+            'group_by': 'wallet'
+        }
+
+    if st.button("Blockchain Analysis", key="blockchain_analysis", use_container_width=True):
+        response = get_conversational_response('chain')
+        st.session_state.messages.append({"role": "user", "content": "Visualize my blockchain exposure"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'specific',
+            'group_by': 'chain'
+        }
+
+    if st.button("Token Categories", key="token_categories", use_container_width=True):
+        response = get_conversational_response('category')
+        st.session_state.messages.append({"role": "user", "content": "Distribution by token categories"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'specific',
+            'group_by': 'category'
+        }
+
+    if st.button("Complete Dashboard", key="complete_dashboard", use_container_width=True):
+        response = get_conversational_response('dashboard')
+        st.session_state.messages.append({"role": "user", "content": "Show a complete dashboard"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'dashboard',
+            'group_by': None
+        }
+
+    if st.button("Show Positions", key="show_positions", use_container_width=True):
+        response = get_conversational_response('positions')
+        st.session_state.messages.append({"role": "user", "content": "Show all my positions"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'positions',
+            'group_by': None
+        }
+
+    if st.button("Total Value", key="total_value", use_container_width=True):
+        response = get_conversational_response('total')
+        total_value = df['usd'].sum()
+        st.session_state.messages.append({"role": "user", "content": "What's the total value of my portfolio?"})
+        st.session_state.messages.append({"role": "assistant", "content": f"{response} ${total_value:.2f} USD"})
+        st.session_state.show_visualization = {
+            'show': False,
+            'type': None,
+            'group_by': None
+        }
+
+    st.markdown("---")
+    st.caption("This assistant analyzes your cryptocurrency portfolio and generates visualizations.")
+
+# Load bot and user icons for avatars
+bot_icon_url = "https://cdn-icons-png.flaticon.com/512/8649/8649595.png"
+user_icon_url = "https://cdn-icons-png.flaticon.com/512/1077/1077114.png"
+
+bot_icon = load_image(bot_icon_url)
+user_icon = load_image(user_icon_url)
+
+# Function to convert image to base64 for HTML
+def img_to_base64(img):
+    if img is None:
+        return None
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
+# Display chat history with custom avatars
+for msg in st.session_state.messages:
+    if msg["role"] == "assistant" and bot_icon:
+        icon_base64 = img_to_base64(bot_icon)
+        avatar_html = f'<img src="data:image/png;base64,{icon_base64}" class="chat-avatar">'
+    elif msg["role"] == "user" and user_icon:
+        icon_base64 = img_to_base64(user_icon)
+        avatar_html = f'<img src="data:image/png;base64,{icon_base64}" class="chat-avatar">'
     else:
         avatar_html = None
-    
-    with st.chat_message(role, avatar=avatar_html):
-        st.write(content)
 
-# Display chat history
-for msg in st.session_state.messages:
-    custom_chat_message(msg["role"], msg["content"])
+    with st.chat_message(msg["role"], avatar=avatar_html if avatar_html else msg["role"]):
+        st.write(msg["content"])
 
 # Visualization area (if activated)
 if st.session_state.show_visualization['show']:
@@ -702,7 +665,7 @@ if st.session_state.show_visualization['show']:
             """)
 
         elif viz_type == 'positions':
-            st.subheader("📋 All Positions")
+            st.subheader("All Positions")
 
             # Enrich DataFrame with data to display
             df_display = df.copy()
