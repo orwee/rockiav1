@@ -26,9 +26,8 @@ if 'openai_api_key' not in st.session_state:
 if 'show_visualization' not in st.session_state:
     st.session_state.show_visualization = {
         'show': False,
-        'type': None,      # puede ser 'dashboard', 'bar', 'pie'
-        'group_by': None,  # wallet, chain, etc.
-        'data': None       # para almacenar DataFrame para tablas
+        'type': None,      # puede ser 'dashboard', 'specific'
+        'group_by': None   # wallet, chain, etc. (None para dashboard)
     }
 
 # Cargar datos del portafolio
@@ -168,12 +167,18 @@ with st.sidebar:
         st.session_state.messages.append({"role": "user", "content": "Muestra un dashboard completo"})
         st.session_state.show_visualization = {
             'show': True,
-            'type': 'dashboard'
+            'type': 'dashboard',
+            'group_by': None  # Explícitamente establecer a None para dashboard
         }
 
     if st.button("💸 Valor Total"):
         st.session_state.messages.append({"role": "user", "content": "¿Cuál es el valor total de mi portafolio?"})
         # No mostrar visualización para esta consulta
+        st.session_state.show_visualization = {
+            'show': False,
+            'type': None,
+            'group_by': None
+        }
 
     st.markdown("---")
     st.caption("Este asistente analiza tu portafolio de criptomonedas y genera visualizaciones.")
@@ -186,7 +191,7 @@ for msg in st.session_state.messages:
 # Área de visualización (si está activada)
 if st.session_state.show_visualization['show']:
     viz_type = st.session_state.show_visualization['type']
-    group_by = st.session_state.show_visualization['group_by']
+    group_by = st.session_state.show_visualization.get('group_by', None)  # Usar .get() con valor por defecto
 
     viz_container = st.container()
 
@@ -310,7 +315,14 @@ if prompt:
 
     # Decidir si mostrar visualización
     if is_viz_query:
-        if group_by:
+        if any(term in query_lower for term in ["dashboard", "completo", "general", "todos"]):
+            st.session_state.show_visualization = {
+                'show': True,
+                'type': 'dashboard',
+                'group_by': None
+            }
+            asst_response = "Aquí tienes un dashboard completo con diferentes visualizaciones de tu portafolio:"
+        elif group_by:
             st.session_state.show_visualization = {
                 'show': True,
                 'type': 'specific',
@@ -318,14 +330,20 @@ if prompt:
             }
             asst_response = f"Aquí tienes la visualización de la distribución por {group_by}:"
         else:
+            # Si pide visualización pero no especifica variable ni dashboard
             st.session_state.show_visualization = {
                 'show': True,
-                'type': 'dashboard'
+                'type': 'dashboard',
+                'group_by': None
             }
             asst_response = "Aquí tienes un dashboard con diferentes visualizaciones de tu portafolio:"
     else:
         # No mostrar visualización, usar el agente para responder
-        st.session_state.show_visualization['show'] = False
+        st.session_state.show_visualization = {
+            'show': False,
+            'type': None,
+            'group_by': None
+        }
 
         if agent:
             try:
