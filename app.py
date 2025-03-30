@@ -16,7 +16,7 @@ import requests
 # Custom color palette
 PRIMARY_COLOR = "#A199DA"
 SECONDARY_COLOR = "#403680"
-BG_COLOR = "#2B314E"
+BG_COLOR = "#000000"#"#2B314E"
 ACCENT_COLOR = "#A199DA"
 LOGO_URL = "https://corp.orwee.io/wp-content/uploads/2023/07/cropped-imageonline-co-transparentimage-23-e1689783905238.webp"
 
@@ -54,7 +54,7 @@ def apply_custom_branding():
 
         /* Custom button styling */
         .stButton > button {{
-            background-color: {SECONDARY_COLOR} !important;
+            background-color: {PRIMARY_COLOR} !important;
             color: white !important;
             border: none !important;
             font-family: 'IBM Plex Mono', monospace !important;
@@ -67,7 +67,7 @@ def apply_custom_branding():
         }}
 
         .stButton > button:hover {{
-            background-color: {PRIMARY_COLOR} !important;
+            background-color: {SECONDARY_COLOR} !important;
         }}
 
         /* Sidebar styling */
