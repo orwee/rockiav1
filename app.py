@@ -61,8 +61,8 @@ def get_conversational_response(query_type):
         ],
         'positions': [
             "Aquí tienes el detalle de todas tus posiciones. Puedes ordenar y filtrar la tabla para analizar mejor tus inversiones:",
-            "He preparado una tabla interactiva con todas tus posiciones. Ordena por cualquier columna haciendo clic en los encabezados:",
-            "Estas son todas tus posiciones actuales. La tabla es interactiva, así que puedes explorar los datos como prefieras:"
+            "He preparado una tabla interactiva con todas tus posiciones. Usa los filtros para encontrar exactamente lo que buscas y ordena haciendo clic en los encabezados:",
+            "Estas son todas tus posiciones actuales. Puedes usar los filtros en la parte superior para centrarte en wallets, blockchains o categorías específicas:"
         ]
     }
 
@@ -354,6 +354,60 @@ if st.session_state.show_visualization['show']:
             total_usd = df_display['usd'].sum()
             df_display['% del Total'] = (df_display['usd'] / total_usd * 100).round(2)
 
+            # Crear filtros
+            st.write("#### Filtros")
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                # Filtro de Wallet
+                wallet_options = ['Todos'] + sorted(df_display['wallet'].unique().tolist())
+                wallet_filter = st.selectbox('Wallet', wallet_options)
+
+            with col2:
+                # Filtro de Blockchain
+                chain_options = ['Todos'] + sorted(df_display['chain'].unique().tolist())
+                chain_filter = st.selectbox('Blockchain', chain_options)
+
+            with col3:
+                # Filtro de Categoría
+                category_options = ['Todos'] + sorted(df_display['category'].unique().tolist())
+                category_filter = st.selectbox('Categoría', category_options)
+
+            with col4:
+                # Filtro de Protocolo
+                protocol_options = ['Todos'] + sorted(df_display['protocol'].unique().tolist())
+                protocol_filter = st.selectbox('Protocolo', protocol_options)
+
+            # Aplicar filtros
+            if wallet_filter != 'Todos':
+                df_display = df_display[df_display['wallet'] == wallet_filter]
+
+            if chain_filter != 'Todos':
+                df_display = df_display[df_display['chain'] == chain_filter]
+
+            if category_filter != 'Todos':
+                df_display = df_display[df_display['category'] == category_filter]
+
+            if protocol_filter != 'Todos':
+                df_display = df_display[df_display['protocol'] == protocol_filter]
+
+            # Slider para filtrar por valor mínimo de USD
+            min_usd = float(df['usd'].min())
+            max_usd = float(df['usd'].max())
+
+            min_value = st.slider(
+                "Valor mínimo (USD)",
+                min_value=min_usd,
+                max_value=max_usd,
+                value=min_usd,
+                step=10.0
+            )
+
+            df_display = df_display[df_display['usd'] >= min_value]
+
+            # Mostrar número de resultados
+            st.write(f"Mostrando {len(df_display)} de {len(df)} posiciones")
+
             # Reorganizar columnas para mejor visualización
             df_display = df_display[['wallet', 'chain', 'protocol', 'token', 'category', 'usd', '% del Total']]
 
@@ -378,16 +432,21 @@ if st.session_state.show_visualization['show']:
             )
 
             # Agregar algunas métricas útiles
-            st.subheader("Resumen")
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total de Posiciones", f"{len(df_display)}")
-            with col2:
-                st.metric("Valor Total", f"${total_usd:.2f}")
-            with col3:
-                st.metric("Posición Mayor", f"${df_display['USD'].max():.2f}")
-            with col4:
-                st.metric("Posición Menor", f"${df_display['USD'].min():.2f}")
+            if len(df_display) > 0:  # Solo si hay resultados después de filtrar
+                filtered_total = df_display['USD'].sum()
+                filtered_percent = (filtered_total / total_usd) * 100
+
+                st.subheader("Resumen de Selección")
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Posiciones Seleccionadas", f"{len(df_display)}")
+                with col2:
+                    st.metric("Valor Seleccionado", f"${filtered_total:.2f}")
+                with col3:
+                    st.metric("% del Total", f"{filtered_percent:.1f}%")
+                with col4:
+                    if len(df_display) > 0:
+                        st.metric("Promedio", f"${df_display['USD'].mean():.2f}")
 
 # Entrada de usuario
 prompt = st.chat_input("Escribe tu consulta...")
