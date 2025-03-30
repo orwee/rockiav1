@@ -129,18 +129,7 @@ def apply_custom_branding():
     st.markdown(css, unsafe_allow_html=True)
         # Main content area
     st.title("DeFi Portfolio Intelligence")
-    # Logo and title in sidebar
-    st.markdown(
-        f"""
-        <div class="logo-container">
-            <img src="{LOGO_URL}" alt="Rocky Logo">
-            <div class="app-title">Rocky - DeFi Portfolio Intelligence</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
     
-    st.markdown("---")  # Separador después del logo
 
 # Page configuration
 st.set_page_config(
@@ -330,6 +319,18 @@ def style_plot(ax):
 
 # Sidebar for configuration
 with st.sidebar:
+    # Logo and title in sidebar
+    st.markdown(
+        f"""
+        <div class="logo-container">
+            <img src="{LOGO_URL}" alt="Rocky Logo">
+            <div class="app-title">Rocky - DeFi Portfolio Intelligence</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    st.markdown("---")  # Separador después del logo
     st.header("Configuration")
 
     st.subheader("Quick Queries")
