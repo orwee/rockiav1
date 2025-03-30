@@ -60,9 +60,9 @@ def get_conversational_response(query_type):
             "Revisando tus posiciones, el valor total de tu portafolio es:"
         ],
         'positions': [
-            "Aquí tienes el detalle de todas tus posiciones. Puedes ordenar y filtrar la tabla para analizar mejor tus inversiones:",
-            "He preparado una tabla interactiva con todas tus posiciones. Usa los filtros para encontrar exactamente lo que buscas y ordena haciendo clic en los encabezados:",
-            "Estas son todas tus posiciones actuales. Puedes usar los filtros en la parte superior para centrarte en wallets, blockchains o categorías específicas:"
+            "Aquí tienes el detalle de todas tus posiciones. Puedes filtrar por cualquier criterio y por rango de valor. Los porcentajes se calculan sobre la selección actual:",
+            "He preparado una tabla interactiva con todas tus posiciones. Usa los filtros para encontrar exactamente lo que buscas y el rango de valores que te interesa:",
+            "Estas son todas tus posiciones actuales. Los filtros te permiten analizar segmentos específicos de tu portafolio. La columna de porcentaje muestra la proporción dentro de tu selección:"
         ]
     }
 
@@ -347,12 +347,8 @@ if st.session_state.show_visualization['show']:
         elif viz_type == 'positions':
             st.subheader("📋 Todas las Posiciones")
 
-            # Enriquecer el DataFrame con datos adicionales
+            # Enriquecer el DataFrame con datos para mostrar
             df_display = df.copy()
-
-            # Calcular % del total para cada posición
-            total_usd = df_display['usd'].sum()
-            df_display['% del Total'] = (df_display['usd'] / total_usd * 100).round(2)
 
             # Crear filtros
             st.write("#### Filtros")
@@ -391,28 +387,36 @@ if st.session_state.show_visualization['show']:
             if protocol_filter != 'Todos':
                 df_display = df_display[df_display['protocol'] == protocol_filter]
 
-            # Slider para filtrar por valor mínimo de USD
+            # Rango para filtrar por valor en USD (mínimo y máximo)
             min_usd = float(df['usd'].min())
             max_usd = float(df['usd'].max())
 
-            min_value = st.slider(
-                "Valor mínimo (USD)",
+            usd_range = st.slider(
+                "Rango de Valor (USD)",
                 min_value=min_usd,
                 max_value=max_usd,
-                value=min_usd,
+                value=(min_usd, max_usd),  # Valor predeterminado: todo el rango
                 step=10.0
             )
 
-            df_display = df_display[df_display['usd'] >= min_value]
+            # Aplicar filtro de rango USD
+            df_display = df_display[(df_display['usd'] >= usd_range[0]) & (df_display['usd'] <= usd_range[1])]
 
             # Mostrar número de resultados
             st.write(f"Mostrando {len(df_display)} de {len(df)} posiciones")
+
+            # Calcular los porcentajes DESPUÉS de todos los filtros, basados en la tabla filtrada
+            if not df_display.empty:
+                filtered_total = df_display['usd'].sum()
+                df_display['% del Total'] = (df_display['usd'] / filtered_total * 100).round(2)
+            else:
+                df_display['% del Total'] = 0  # Manejo de caso vacío
 
             # Reorganizar columnas para mejor visualización
             df_display = df_display[['wallet', 'chain', 'protocol', 'token', 'category', 'usd', '% del Total']]
 
             # Renombrar columnas para mejor presentación
-            df_display.columns = ['Wallet', 'Blockchain', 'Protocolo', 'Token', 'Categoría', 'USD', '% del Total']
+            df_display.columns = ['Wallet', 'Blockchain', 'Protocolo', 'Token', 'Categoría', 'USD', '% de Selección']
 
             # Tabla interactiva con filtrado y ordenación
             st.dataframe(
@@ -421,7 +425,7 @@ if st.session_state.show_visualization['show']:
                     "USD": st.column_config.NumberColumn(
                         format="$%.2f",
                     ),
-                    "% del Total": st.column_config.ProgressColumn(
+                    "% de Selección": st.column_config.ProgressColumn(
                         format="%.1f%%",
                         min_value=0,
                         max_value=100,
@@ -434,7 +438,8 @@ if st.session_state.show_visualization['show']:
             # Agregar algunas métricas útiles
             if len(df_display) > 0:  # Solo si hay resultados después de filtrar
                 filtered_total = df_display['USD'].sum()
-                filtered_percent = (filtered_total / total_usd) * 100
+                total_portfolio = df['usd'].sum()
+                filtered_percent = (filtered_total / total_portfolio) * 100
 
                 st.subheader("Resumen de Selección")
                 col1, col2, col3, col4 = st.columns(4)
@@ -443,10 +448,10 @@ if st.session_state.show_visualization['show']:
                 with col2:
                     st.metric("Valor Seleccionado", f"${filtered_total:.2f}")
                 with col3:
-                    st.metric("% del Total", f"{filtered_percent:.1f}%")
+                    st.metric("% del Portfolio Total", f"{filtered_percent:.1f}%")
                 with col4:
                     if len(df_display) > 0:
-                        st.metric("Promedio", f"${df_display['USD'].mean():.2f}")
+                        st.metric("Promedio por Posición", f"${df_display['USD'].mean():.2f}")
 
 # Entrada de usuario
 prompt = st.chat_input("Escribe tu consulta...")
