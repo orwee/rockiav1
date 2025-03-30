@@ -140,7 +140,7 @@ df['category'] = df['token'].apply(classify_token)
 def setup_agent(_df):
     try:
         # Intentar primero leer de secrets.toml
-        api_key = st.secrets.get("openai", {}).get("api_key", None)
+        api_key = st.secrets.get("OPENAI_API_KEY")
     except:
         # Si no está en secrets, leer de variables de entorno
         import os
