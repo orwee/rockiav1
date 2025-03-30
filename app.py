@@ -108,6 +108,7 @@ def apply_custom_branding():
             font-weight: bold;
             font-size: 1.5em;
             color: {PRIMARY_COLOR};
+            font-size: 14px !important;
         }}
 
         /* Import IBM Plex Mono font */
@@ -135,7 +136,7 @@ def apply_custom_branding():
 
 # Page configuration
 st.set_page_config(
-    page_title="Rocky - DeFi Portfolio Intelligence",
+    page_title="Rocky - DeFi Portfolio Assistant",
     page_icon="🚀",
     layout="wide"
 )
@@ -146,7 +147,7 @@ apply_custom_branding()
 # Initialize session states
 if 'messages' not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hello! I'm Rocky, your DeFi portfolio assistant built with OI (Orwee Intelligence). How can I help you today?"}
+        {"role": "assistant", "content": "Hello! I'm Rocky, your DeFi Portfolio Assistant built with OI (Orwee Intelligence). How can I help you today?"}
     ]
 
 if 'show_visualization' not in st.session_state:
@@ -326,7 +327,7 @@ with st.sidebar:
         f"""
         <div class="logo-container">
             <img src="{LOGO_URL}" alt="Rocky Logo">
-            <div class="app-title">Rocky - DeFi Portfolio Intelligence</div>
+            <div class="app-title">Rocky - DeFi Portfolio Assistant</div>
         </div>
         """,
         unsafe_allow_html=True
