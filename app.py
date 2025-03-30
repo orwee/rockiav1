@@ -104,6 +104,14 @@ def load_portfolio_data():
             "token": "JLP/SOL",
             "usd": 551
         },
+        {
+            "id": 5,
+            "wallet": "Wallet #1",
+            "chain": "ethereum",
+            "protocol": "Aave V3",
+            "token": "ETH",
+            "usd": 3.50
+        },
     ]
     return pd.DataFrame(portfolio_data)
 
@@ -287,6 +295,25 @@ if st.session_state.show_visualization['show']:
             })
             st.dataframe(data_df, hide_index=True)
 
+            # Añadir resumen narrativo
+            st.subheader("Resumen del Análisis")
+
+            # Preparar información para el resumen
+            top_item = grouped_data.idxmax()
+            top_value = grouped_data.max()
+            top_percent = (top_value/total*100).round(2)
+
+            # Texto con formato
+            st.markdown(f"""
+            Analizando tu distribución por **{group_by}**, observo que:
+
+            - Tu portafolio tiene un valor total de **${total:.2f}**
+            - La mayor concentración está en **{top_item}** con **${top_value:.2f}** (**{top_percent}%** del total)
+            - Tienes exposición a **{len(grouped_data)}** {group_by}s diferentes
+
+            Esta visualización te permite evaluar tu nivel de diversificación y concentración de riesgo por {group_by}.
+            """)
+
         elif viz_type == 'dashboard':
             st.subheader("Dashboard del Portafolio")
 
@@ -344,6 +371,40 @@ if st.session_state.show_visualization['show']:
                 ax.set_ylabel("USD")
                 st.pyplot(fig)
 
+            # Añadir resumen narrativo para el dashboard
+            st.subheader("Resumen General del Portafolio")
+
+            # Calcular datos para el resumen
+            top_wallet = wallet_data.idxmax()
+            top_wallet_value = wallet_data.max()
+            top_wallet_percent = (top_wallet_value/total_value*100).round(2)
+
+            top_chain = chain_data.idxmax()
+            top_chain_value = chain_data.max()
+            top_chain_percent = (top_chain_value/total_value*100).round(2)
+
+            top_category = cat_data.idxmax()
+            top_category_value = cat_data.max()
+            top_category_percent = (top_category_value/total_value*100).round(2)
+
+            # Crear resumen narrativo
+            st.markdown(f"""
+            ### Análisis de Portafolio
+
+            Tu portafolio tiene un valor total de **${total_value:.2f}** distribuido entre **{len(df)}** posiciones en **{unique_chains}** blockchains diferentes.
+
+            #### Distribución Principal:
+            - **Wallet**: La mayoría de tus fondos (**{top_wallet_percent}%**) están en **{top_wallet}** con un valor de **${top_wallet_value:.2f}**
+            - **Blockchain**: Tu mayor exposición es a **{top_chain}** con **${top_chain_value:.2f}** (**{top_chain_percent}%** del total)
+            - **Categoría**: Tienes mayor concentración en tokens de tipo **{top_category}** con **${top_category_value:.2f}** (**{top_category_percent}%**)
+
+            La diversificación actual de tu portafolio muestra una tendencia hacia {
+            "una alta concentración" if top_wallet_percent > 70 else
+            "una diversificación moderada" if top_wallet_percent > 40 else
+            "una buena diversificación"
+            } de fondos.
+            """)
+
         elif viz_type == 'positions':
             st.subheader("📋 Todas las Posiciones")
 
@@ -395,8 +456,8 @@ if st.session_state.show_visualization['show']:
                 "Rango de Valor (USD)",
                 min_value=min_usd,
                 max_value=max_usd,
-                value=(min_usd, max_usd),  # Valor predeterminado: todo el rango
-                step=10.0
+                value=(max(min_usd, 5.0), max_usd),  # Valor predeterminado: mínimo $5
+                step=1.0
             )
 
             # Aplicar filtro de rango USD
@@ -452,6 +513,40 @@ if st.session_state.show_visualization['show']:
                 with col4:
                     if len(df_display) > 0:
                         st.metric("Promedio por Posición", f"${df_display['USD'].mean():.2f}")
+
+                # Añadir resumen narrativo para las posiciones filtradas
+                st.subheader("Análisis de Posiciones")
+
+                # Calcular información para el resumen
+                top_position = df_display.loc[df_display['USD'].idxmax()]
+                bottom_position = df_display.loc[df_display['USD'].idxmin()]
+
+                # Calcular estadísticas sobre las blockchains y wallets en la selección
+                chain_counts = df_display['Blockchain'].value_counts()
+                top_chain = chain_counts.index[0] if len(chain_counts) > 0 else "ninguna"
+
+                wallet_distribution = df_display.groupby('Wallet')['USD'].sum()
+                top_wallet = wallet_distribution.idxmax() if not wallet_distribution.empty else "ninguna"
+                top_wallet_value = wallet_distribution.max() if not wallet_distribution.empty else 0
+                top_wallet_percent = (top_wallet_value/filtered_total*100).round(2) if filtered_total > 0 else 0
+
+                # Crear resumen narrativo con datos importantes en negrita
+                st.markdown(f"""
+                En tu selección actual de **{len(df_display)} posiciones** con un valor total de **${filtered_total:.2f}**, observo que:
+
+                - Tu posición más grande es **{top_position['Token']}** en **{top_position['Protocolo']}** en la blockchain **{top_position['Blockchain']}** con un valor de **${top_position['USD']:.2f}**
+                - La posición más pequeña es **{bottom_position['Token']}** con **${bottom_position['USD']:.2f}**
+                - La blockchain más utilizada en esta selección es **{top_chain}**
+                - La wallet con mayor concentración es **{top_wallet}** con **${top_wallet_value:.2f}** (**{top_wallet_percent}%** de la selección)
+
+                Esta selección representa el **{filtered_percent:.1f}%** de tu portafolio total.
+                """)
+
+                # Añadir recomendación basada en los datos
+                if filtered_percent > 80:
+                    st.info("📈 Esta selección contiene la mayor parte de tu portafolio. Considera diversificar más para reducir el riesgo.")
+                elif len(df_display) == 1:
+                    st.info("🔍 Estás analizando una única posición. Para un análisis comparativo, ajusta los filtros para incluir más posiciones.")
 
 # Entrada de usuario
 prompt = st.chat_input("Escribe tu consulta...")
