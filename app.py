@@ -94,13 +94,13 @@ def apply_custom_branding():
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             text-align: center;
         }}
 
         .logo-container img {{
             width: 30%;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }}
 
         .app-title {{
