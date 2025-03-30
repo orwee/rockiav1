@@ -1,4 +1,4 @@
-import streamlit as st 
+import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -9,14 +9,19 @@ from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
 import os
 import matplotlib as mpl
-
-# Añade esto al inicio del archivo después de los imports
 from PIL import Image
 from io import BytesIO
-import base64
 import requests
+import base64
 
-# URLs para los iconos (puedes reemplazarlas con tus propias imágenes)
+# Custom color palette
+PRIMARY_COLOR = "#A199DA"
+SECONDARY_COLOR = "#403680"
+BG_COLOR = "#2B314E"
+ACCENT_COLOR = "#A199DA"
+LOGO_URL = "https://corp.orwee.io/wp-content/uploads/2023/07/cropped-imageonline-co-transparentimage-23-e1689783905238.webp"
+
+# URLs para los iconos
 BOT_ICON_URL = "https://cdn-icons-png.flaticon.com/512/8649/8649595.png"
 USER_ICON_URL = "https://cdn-icons-png.flaticon.com/512/1077/1077114.png"
 
@@ -30,7 +35,7 @@ TOTAL_ICON_URL = "https://cdn-icons-png.flaticon.com/512/1621/1621635.png"
 
 # Función para cargar imágenes desde URL
 @st.cache_data
-def load_image_from_url(url):
+def load_image(url):
     try:
         response = requests.get(url)
         img = Image.open(BytesIO(response.content))
@@ -39,66 +44,17 @@ def load_image_from_url(url):
         st.error(f"Error loading image: {e}")
         return None
 
-# Función para convertir imagen a base64 para CSS
+# Función para convertir imagen a base64 para HTML
 def img_to_base64(img):
     buffered = BytesIO()
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-# Cargar iconos
-bot_icon = load_image_from_url(BOT_ICON_URL)
-user_icon = load_image_from_url(USER_ICON_URL)
-
-# Cargar iconos de botones
-wallet_icon = load_image_from_url(WALLET_ICON_URL)
-blockchain_icon = load_image_from_url(BLOCKCHAIN_ICON_URL)
-category_icon = load_image_from_url(CATEGORY_ICON_URL)
-dashboard_icon = load_image_from_url(DASHBOARD_ICON_URL)
-position_icon = load_image_from_url(POSITION_ICON_URL)
-total_icon = load_image_from_url(TOTAL_ICON_URL)
-
-# Función para crear botón personalizado con icono
-def icon_button(icon, label, key=None):
-    if icon:
-        icon_b64 = img_to_base64(icon)
-        button_html = f"""
-        <button class="custom-button" id="{key or label}">
-            <img src="data:image/png;base64,{icon_b64}" class="button-icon">
-            <span>{label}</span>
-        </button>
-        """
-        clicked = st.markdown(button_html, unsafe_allow_html=True)
-        
-        # JavaScript para detectar clics en el botón personalizado
-        js = f"""
-        <script>
-        document.getElementById("{key or label}").addEventListener("click", function() {{
-            window.parent.postMessage({{type: "streamlit:setComponentValue", value: "{key or label}"}}, "*");
-        }});
-        </script>
-        """
-        st.markdown(js, unsafe_allow_html=True)
-        
-        # Verificar si el botón fue clickeado
-        if st.session_state.get(f"button_{key or label}", False):
-            st.session_state[f"button_{key or label}"] = False
-            return True
-    else:
-        # Fallback a botón normal si no hay icono
-        return st.button(label, key=key)
-    return False
-    
-# Custom color palette
-PRIMARY_COLOR = "#A199DA"
-SECONDARY_COLOR = "#403680"
-BG_COLOR = "#000000"#"#2B314E"
-ACCENT_COLOR = "#A199DA"
-LOGO_URL = "https://corp.orwee.io/wp-content/uploads/2023/07/cropped-imageonline-co-transparentimage-23-e1689783905238.webp"
-
 # Create custom sequential color palette for charts
 def create_custom_cmap():
     return mpl.colors.LinearSegmentedColormap.from_list("Rocky", [PRIMARY_COLOR, SECONDARY_COLOR])
 
+# Apply custom branding
 def apply_custom_branding():
     # Custom CSS with Rocky branding
     css = f"""
@@ -115,41 +71,36 @@ def apply_custom_branding():
             color: {PRIMARY_COLOR};
         }}
 
-        /* Custom button styling */
-        .custom-button {{
-            background-color: {SECONDARY_COLOR};
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 10px 15px;
-            font-family: 'IBM Plex Mono', monospace;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            width: 100%;
-            transition: background-color 0.3s;
+        /* Custom icon buttons */
+        .stButton > button {{
+            background-color: {SECONDARY_COLOR} !important;
+            color: white !important;
+            border: none !important;
+            font-family: 'IBM Plex Mono', monospace !important;
+            padding: 10px 15px !important;
+            border-radius: 4px !important;
+            width: 100% !important;
+            text-align: left !important;
+            font-size: 14px !important;
+            margin-bottom: 8px !important;
         }}
 
-        .custom-button:hover {{
-            background-color: {PRIMARY_COLOR};
+        .stButton > button:hover {{
+            background-color: {PRIMARY_COLOR} !important;
         }}
 
+        /* Custom button icon */
         .button-icon {{
+            margin-right: 10px;
+            vertical-align: middle;
             width: 20px;
             height: 20px;
-            margin-right: 10px;
-        }}
-
-        /* Chat avatars */
-        .custom-avatar {{
-            border-radius: 50%;
-            border: 2px solid {PRIMARY_COLOR};
         }}
 
         /* Sidebar styling */
-        .css-1d391kg, .css-12oz5g7 {{
+        section[data-testid="stSidebar"] {{
             background-color: {BG_COLOR};
+            border-right: 1px solid {PRIMARY_COLOR};
         }}
 
         /* Add your logo */
@@ -187,6 +138,15 @@ def apply_custom_branding():
             border-radius: 5px;
             border: 1px solid {PRIMARY_COLOR};
         }}
+        
+        /* Custom chat avatars */
+        .chat-avatar {{
+            border-radius: 50%;
+            border: 2px solid {PRIMARY_COLOR};
+            width: 38px;
+            height: 38px;
+            object-fit: cover;
+        }}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
@@ -201,7 +161,7 @@ def apply_custom_branding():
         """,
         unsafe_allow_html=True
     )
-    
+
 # Page configuration
 st.set_page_config(
     page_title="Rocky - DeFi Portfolio",
@@ -211,6 +171,18 @@ st.set_page_config(
 
 # Apply branding
 apply_custom_branding()
+
+# Cargar imágenes de avatares
+bot_icon = load_image(BOT_ICON_URL)
+user_icon = load_image(USER_ICON_URL)
+
+# Cargar iconos para botones
+wallet_icon = load_image(WALLET_ICON_URL)
+blockchain_icon = load_image(BLOCKCHAIN_ICON_URL) 
+category_icon = load_image(CATEGORY_ICON_URL)
+dashboard_icon = load_image(DASHBOARD_ICON_URL)
+position_icon = load_image(POSITION_ICON_URL)
+total_icon = load_image(TOTAL_ICON_URL)
 
 # Initialize session states
 if 'messages' not in st.session_state:
@@ -372,6 +344,16 @@ def setup_agent(_df):
 # Configure agent
 agent = setup_agent(df)
 
+# Helper function for custom icon buttons
+def custom_button(label, icon_img=None, key=None):
+    if icon_img:
+        icon_base64 = img_to_base64(icon_img)
+        button_label = f'<img src="data:image/png;base64,{icon_base64}" class="button-icon"> {label}'
+    else:
+        button_label = label
+    
+    return st.button(button_label, key=key, use_container_width=True, help=label, unsafe_allow_html=True)
+
 # Sidebar for configuration
 with st.sidebar:
     st.header("Configuration")
@@ -379,7 +361,7 @@ with st.sidebar:
     st.subheader("Quick Queries")
 
     # Custom buttons with icons
-    if icon_button(wallet_icon, "Wallet Distribution", "wallet_dist"):
+    if custom_button("Wallet Distribution", wallet_icon, "wallet_dist"):
         response = get_conversational_response('wallet')
         st.session_state.messages.append({"role": "user", "content": "Show wallet distribution"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -389,7 +371,7 @@ with st.sidebar:
             'group_by': 'wallet'
         }
 
-    if icon_button(blockchain_icon, "Blockchain Analysis", "blockchain_analysis"):
+    if custom_button("Blockchain Analysis", blockchain_icon, "blockchain_analysis"):
         response = get_conversational_response('chain')
         st.session_state.messages.append({"role": "user", "content": "Visualize my blockchain exposure"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -399,7 +381,7 @@ with st.sidebar:
             'group_by': 'chain'
         }
 
-    if icon_button(category_icon, "Token Categories", "token_categories"):
+    if custom_button("Token Categories", category_icon, "token_categories"):
         response = get_conversational_response('category')
         st.session_state.messages.append({"role": "user", "content": "Distribution by token categories"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -409,7 +391,7 @@ with st.sidebar:
             'group_by': 'category'
         }
 
-    if icon_button(dashboard_icon, "Complete Dashboard", "complete_dashboard"):
+    if custom_button("Complete Dashboard", dashboard_icon, "complete_dashboard"):
         response = get_conversational_response('dashboard')
         st.session_state.messages.append({"role": "user", "content": "Show a complete dashboard"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -419,7 +401,7 @@ with st.sidebar:
             'group_by': None
         }
 
-    if icon_button(position_icon, "Show Positions", "show_positions"):
+    if custom_button("Show Positions", position_icon, "show_positions"):
         response = get_conversational_response('positions')
         st.session_state.messages.append({"role": "user", "content": "Show all my positions"})
         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -429,7 +411,7 @@ with st.sidebar:
             'group_by': None
         }
 
-    if icon_button(total_icon, "Total Value", "total_value"):
+    if custom_button("Total Value", total_icon, "total_value"):
         response = get_conversational_response('total')
         total_value = df['usd'].sum()
         st.session_state.messages.append({"role": "user", "content": "What's the total value of my portfolio?"})
@@ -459,22 +441,23 @@ def style_plot(ax):
         spine.set_color(ACCENT_COLOR)
     return ax
 
-# Display chat history
-for msg in st.session_state.messages:
-    if msg["role"] == "assistant":
-        avatar_img = bot_icon
-    else:
-        avatar_img = user_icon
-
-    # Convertir la imagen a base64
-    if avatar_img:
-        avatar_base64 = img_to_base64(avatar_img)
-        avatar_html = f'<img src="data:image/png;base64,{avatar_base64}" class="custom-avatar" width="40" height="40">'
+# Custom chat messages with avatars
+def custom_chat_message(role, content):
+    if role == "assistant" and bot_icon:
+        icon_b64 = img_to_base64(bot_icon)
+        avatar_html = f'<img src="data:image/png;base64,{icon_b64}" class="chat-avatar">'
+    elif role == "user" and user_icon:
+        icon_b64 = img_to_base64(user_icon)
+        avatar_html = f'<img src="data:image/png;base64,{icon_b64}" class="chat-avatar">'
     else:
         avatar_html = None
+    
+    with st.chat_message(role, avatar=avatar_html):
+        st.write(content)
 
-    with st.chat_message(msg["role"], avatar=avatar_html if avatar_html else msg["role"]):
-        st.write(msg["content"])
+# Display chat history
+for msg in st.session_state.messages:
+    custom_chat_message(msg["role"], msg["content"])
 
 # Visualization area (if activated)
 if st.session_state.show_visualization['show']:
@@ -505,7 +488,8 @@ if st.session_state.show_visualization['show']:
 
             with col2:
                 fig, ax = plt.subplots(figsize=(8, 5))
-                grouped_data.plot(kind='pie', autopct='%1.1f%%', ax=ax, colors=[PRIMARY_COLOR, SECONDARY_COLOR])
+                colors = plt.cm.get_cmap(custom_cmap)(np.linspace(0, 1, len(grouped_data)))
+                grouped_data.plot(kind='pie', autopct='%1.1f%%', ax=ax, colors=colors)
                 style_plot(ax)
                 ax.set_title(f"Distribution by {group_by.capitalize()}")
                 ax.axis('equal')
@@ -910,21 +894,19 @@ if prompt:
     # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Analyze the query to determine if it's visualization-related
-    query_lower = prompt.lower()
-    
     # Function to detect query intent (supporting both English and Spanish)
     def detect_query_intent(query_text):
         query_lower = query_text.lower()
-        
+
         for intent, keywords in BILINGUAL_KEYWORDS.items():
             if any(keyword in query_lower for keyword in keywords):
                 return intent
-                
+
         return None
-    
-    intent = detect_query_intent(query_lower)
-    
+
+    # Analyze the query
+    intent = detect_query_intent(prompt.lower())
+
     # Handle visualization queries
     if intent == 'positions':
         viz_type = 'positions'
@@ -960,7 +942,7 @@ if prompt:
             except Exception as e:
                 asst_response = f"Error processing your query: {str(e)}"
         else:
-            asst_response = "I can't respond without a valid API key. Please configure the API key in the sidebar."
+            asst_response = "I can't respond without a valid API key. Please ensure your OpenAI API key is configured."
 
     # Update visualization state
     if intent and intent != 'total':
