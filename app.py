@@ -69,7 +69,7 @@ def apply_custom_branding():
 
         /* Header styling */
         h1, h2, h3, h4, h5, h6 {{
-            font-family: 'IBM Plex Mono', monospace !important;
+            font-family: 'Courier New', Courier, monospace !important;
             color: {PRIMARY_COLOR};
         }}
 
@@ -78,7 +78,7 @@ def apply_custom_branding():
             background-color: {PRIMARY_COLOR} !important;
             color: white !important;
             border: none !important;
-            font-family: 'IBM Plex Mono', monospace !important;
+            font-family: 'Courier New', Courier, monospace !important;
             padding: 10px 15px !important;
             border-radius: 4px !important;
             width: 100% !important;
@@ -112,7 +112,7 @@ def apply_custom_branding():
         }}
 
         .app-title {{
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Courier New', Courier, monospace;
             font-weight: bold;
             font-size: 1.5em;
             color: {PRIMARY_COLOR};
