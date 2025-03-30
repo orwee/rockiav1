@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import random
 from langchain_openai import ChatOpenAI
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
@@ -26,9 +27,46 @@ if 'openai_api_key' not in st.session_state:
 if 'show_visualization' not in st.session_state:
     st.session_state.show_visualization = {
         'show': False,
-        'type': None,      # puede ser 'dashboard', 'specific'
+        'type': None,      # puede ser 'dashboard', 'specific', 'positions'
         'group_by': None   # wallet, chain, etc. (None para dashboard)
     }
+
+# Respuestas conversacionales para cada tipo de consulta rápida
+def get_conversational_response(query_type):
+    responses = {
+        'wallet': [
+            "¡Claro! Aquí tienes la distribución de tus fondos por wallet. Veo que tienes algunos wallets con bastante concentración 👀",
+            "Analizando tus wallets... Esto es interesante. Te muestro cómo están distribuidos tus fondos entre diferentes wallets:",
+            "He revisado tus datos y aquí te presento la distribución por wallet. ¿Habías considerado balancear un poco más tu exposición?"
+        ],
+        'chain': [
+            "He analizado tu exposición a diferentes blockchains. Aquí tienes el detalle de cómo están distribuidos tus fondos:",
+            "¡Diversificación blockchain! Veamos en qué cadenas tienes invertido actualmente. Esto te ayudará a evaluar tu exposición a riesgos específicos de cada red:",
+            "Aquí está el análisis por blockchain. Es interesante ver cómo tienes distribuidas tus inversiones entre diferentes ecosistemas:"
+        ],
+        'category': [
+            "He categorizado tus tokens y aquí tienes la distribución. Esto te da una idea de tu balance entre stablecoins, bluechips y altcoins:",
+            "Veamos la distribución por categoría de tokens... Esto es interesante. Fíjate en el balance entre activos de bajo y alto riesgo:",
+            "Aquí tienes el análisis por categoría. Es importante mantener un equilibrio según tu estrategia de inversión y tolerancia al riesgo:"
+        ],
+        'dashboard': [
+            "¡Preparando un análisis completo! Aquí tienes un dashboard con las principales métricas y visualizaciones de tu portafolio:",
+            "Un panorama general siempre es útil. He generado este dashboard con diferentes perspectivas de tu portafolio para que puedas analizar todo de un vistazo:",
+            "Excelente elección. Te presento un resumen completo de tu portafolio con diferentes visualizaciones que te ayudarán a entender mejor tu posición actual:"
+        ],
+        'total': [
+            "He calculado el valor total de tu portafolio. Actualmente tienes invertido:",
+            "Según mis cálculos, el valor total de tu portafolio en este momento es:",
+            "Revisando tus posiciones, el valor total de tu portafolio es:"
+        ],
+        'positions': [
+            "Aquí tienes el detalle de todas tus posiciones. Puedes ordenar y filtrar la tabla para analizar mejor tus inversiones:",
+            "He preparado una tabla interactiva con todas tus posiciones. Ordena por cualquier columna haciendo clic en los encabezados:",
+            "Estas son todas tus posiciones actuales. La tabla es interactiva, así que puedes explorar los datos como prefieras:"
+        ]
+    }
+
+    return random.choice(responses.get(query_type, ["Aquí tienes lo que me pediste:"]))
 
 # Cargar datos del portafolio
 @st.cache_data
@@ -140,7 +178,9 @@ with st.sidebar:
 
     # Botones de acciones rápidas
     if st.button("📊 Distribución por Wallet"):
+        response = get_conversational_response('wallet')
         st.session_state.messages.append({"role": "user", "content": "Muestra la distribución por wallet"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.show_visualization = {
             'show': True,
             'type': 'specific',
@@ -148,7 +188,9 @@ with st.sidebar:
         }
 
     if st.button("🔗 Análisis por Blockchain"):
+        response = get_conversational_response('chain')
         st.session_state.messages.append({"role": "user", "content": "Visualiza mi exposición por blockchain"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.show_visualization = {
             'show': True,
             'type': 'specific',
@@ -156,7 +198,9 @@ with st.sidebar:
         }
 
     if st.button("💰 Categorías de Token"):
+        response = get_conversational_response('category')
         st.session_state.messages.append({"role": "user", "content": "Distribución por categorías de token"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.show_visualization = {
             'show': True,
             'type': 'specific',
@@ -164,16 +208,30 @@ with st.sidebar:
         }
 
     if st.button("🔄 Dashboard Completo"):
+        response = get_conversational_response('dashboard')
         st.session_state.messages.append({"role": "user", "content": "Muestra un dashboard completo"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.show_visualization = {
             'show': True,
             'type': 'dashboard',
-            'group_by': None  # Explícitamente establecer a None para dashboard
+            'group_by': None
+        }
+
+    if st.button("📋 Mostrar Posiciones"):
+        response = get_conversational_response('positions')
+        st.session_state.messages.append({"role": "user", "content": "Muestra todas mis posiciones"})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': 'positions',
+            'group_by': None
         }
 
     if st.button("💸 Valor Total"):
+        response = get_conversational_response('total')
+        total_value = df['usd'].sum()
         st.session_state.messages.append({"role": "user", "content": "¿Cuál es el valor total de mi portafolio?"})
-        # No mostrar visualización para esta consulta
+        st.session_state.messages.append({"role": "assistant", "content": f"{response} ${total_value:.2f} USD"})
         st.session_state.show_visualization = {
             'show': False,
             'type': None,
@@ -191,7 +249,7 @@ for msg in st.session_state.messages:
 # Área de visualización (si está activada)
 if st.session_state.show_visualization['show']:
     viz_type = st.session_state.show_visualization['type']
-    group_by = st.session_state.show_visualization.get('group_by', None)  # Usar .get() con valor por defecto
+    group_by = st.session_state.show_visualization.get('group_by', None)
 
     viz_container = st.container()
 
@@ -286,6 +344,51 @@ if st.session_state.show_visualization['show']:
                 ax.set_ylabel("USD")
                 st.pyplot(fig)
 
+        elif viz_type == 'positions':
+            st.subheader("📋 Todas las Posiciones")
+
+            # Enriquecer el DataFrame con datos adicionales
+            df_display = df.copy()
+
+            # Calcular % del total para cada posición
+            total_usd = df_display['usd'].sum()
+            df_display['% del Total'] = (df_display['usd'] / total_usd * 100).round(2)
+
+            # Reorganizar columnas para mejor visualización
+            df_display = df_display[['wallet', 'chain', 'protocol', 'token', 'category', 'usd', '% del Total']]
+
+            # Renombrar columnas para mejor presentación
+            df_display.columns = ['Wallet', 'Blockchain', 'Protocolo', 'Token', 'Categoría', 'USD', '% del Total']
+
+            # Tabla interactiva con filtrado y ordenación
+            st.dataframe(
+                df_display,
+                column_config={
+                    "USD": st.column_config.NumberColumn(
+                        format="$%.2f",
+                    ),
+                    "% del Total": st.column_config.ProgressColumn(
+                        format="%.1f%%",
+                        min_value=0,
+                        max_value=100,
+                    ),
+                },
+                hide_index=True,
+                use_container_width=True
+            )
+
+            # Agregar algunas métricas útiles
+            st.subheader("Resumen")
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total de Posiciones", f"{len(df_display)}")
+            with col2:
+                st.metric("Valor Total", f"${total_usd:.2f}")
+            with col3:
+                st.metric("Posición Mayor", f"${df_display['USD'].max():.2f}")
+            with col4:
+                st.metric("Posición Menor", f"${df_display['USD'].min():.2f}")
+
 # Entrada de usuario
 prompt = st.chat_input("Escribe tu consulta...")
 
@@ -295,63 +398,73 @@ if prompt:
 
     # Analizar la consulta para determinar si es de visualización
     query_lower = prompt.lower()
-    viz_terms = ["gráfico", "grafico", "visualiza", "visualizar", "mostrar", "ver", "distribución", "distribucion", "dashboard"]
+    viz_terms = ["gráfico", "grafico", "visualiza", "visualizar", "mostrar", "ver", "distribución", "distribucion", "dashboard", "posiciones"]
     is_viz_query = any(term in query_lower for term in viz_terms)
 
-    # Variables de agrupación
-    group_vars = {
-        "wallet": "wallet", "billetera": "wallet",
-        "blockchain": "chain", "chain": "chain", "cadena": "chain",
-        "categoria": "category", "categoría": "category", "tipo de token": "category",
-        "protocolo": "protocol", "protocol": "protocol",
-        "token": "token"
-    }
-
-    group_by = None
-    for term, var in group_vars.items():
-        if term in query_lower:
-            group_by = var
-            break
-
-    # Decidir si mostrar visualización
-    if is_viz_query:
-        if any(term in query_lower for term in ["dashboard", "completo", "general", "todos"]):
-            st.session_state.show_visualization = {
-                'show': True,
-                'type': 'dashboard',
-                'group_by': None
-            }
-            asst_response = "Aquí tienes un dashboard completo con diferentes visualizaciones de tu portafolio:"
-        elif group_by:
-            st.session_state.show_visualization = {
-                'show': True,
-                'type': 'specific',
-                'group_by': group_by
-            }
-            asst_response = f"Aquí tienes la visualización de la distribución por {group_by}:"
-        else:
-            # Si pide visualización pero no especifica variable ni dashboard
-            st.session_state.show_visualization = {
-                'show': True,
-                'type': 'dashboard',
-                'group_by': None
-            }
-            asst_response = "Aquí tienes un dashboard con diferentes visualizaciones de tu portafolio:"
+    # Determinar el tipo de consulta
+    if "posiciones" in query_lower or "positions" in query_lower:
+        viz_type = 'positions'
+        group_by = None
+        asst_response = get_conversational_response('positions')
     else:
-        # No mostrar visualización, usar el agente para responder
+        # Variables de agrupación
+        group_vars = {
+            "wallet": "wallet", "billetera": "wallet",
+            "blockchain": "chain", "chain": "chain", "cadena": "chain",
+            "categoria": "category", "categoría": "category", "tipo de token": "category",
+            "protocolo": "protocol", "protocol": "protocol",
+            "token": "token"
+        }
+
+        group_by = None
+        for term, var in group_vars.items():
+            if term in query_lower:
+                group_by = var
+                break
+
+        # Decidir si mostrar visualización
+        if is_viz_query:
+            if any(term in query_lower for term in ["dashboard", "completo", "general", "todos"]):
+                viz_type = 'dashboard'
+                group_by = None
+                asst_response = get_conversational_response('dashboard')
+            elif group_by:
+                viz_type = 'specific'
+                asst_response = get_conversational_response(group_by if group_by in ['wallet', 'chain', 'category'] else 'specific')
+            else:
+                # Si pide visualización pero no especifica variable ni dashboard
+                viz_type = 'dashboard'
+                group_by = None
+                asst_response = get_conversational_response('dashboard')
+        else:
+            # No es una consulta de visualización
+            viz_type = None
+            if "total" in query_lower or "valor" in query_lower:
+                total_value = df['usd'].sum()
+                asst_response = f"{get_conversational_response('total')} ${total_value:.2f} USD"
+            else:
+                # Usar el agente para otras consultas
+                if agent:
+                    try:
+                        asst_response = agent.run(prompt)
+                    except Exception as e:
+                        asst_response = f"Error al procesar tu consulta: {str(e)}"
+                else:
+                    asst_response = "No puedo responder sin una API key válida. Por favor, configura la API key en la barra lateral."
+
+    # Actualizar estado de visualización
+    if is_viz_query:
+        st.session_state.show_visualization = {
+            'show': True,
+            'type': viz_type,
+            'group_by': group_by
+        }
+    else:
         st.session_state.show_visualization = {
             'show': False,
             'type': None,
             'group_by': None
         }
-
-        if agent:
-            try:
-                asst_response = agent.run(prompt)
-            except Exception as e:
-                asst_response = f"Error al procesar tu consulta: {str(e)}"
-        else:
-            asst_response = "No puedo responder sin una API key válida. Por favor, configura la API key en la barra lateral."
 
     # Añadir respuesta del asistente
     st.session_state.messages.append({"role": "assistant", "content": asst_response})
