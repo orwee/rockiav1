@@ -12,7 +12,6 @@ import matplotlib as mpl
 from PIL import Image
 from io import BytesIO
 import requests
-import base64
 
 # Custom color palette
 PRIMARY_COLOR = "#A199DA"
@@ -111,15 +110,6 @@ def apply_custom_branding():
             padding: 15px;
             border-radius: 5px;
             border: 1px solid {PRIMARY_COLOR};
-        }}
-
-        /* Custom chat avatars */
-        .chat-avatar {{
-            border-radius: 50%;
-            border: 2px solid {PRIMARY_COLOR};
-            width: 38px;
-            height: 38px;
-            object-fit: cover;
         }}
     </style>
     """
@@ -328,7 +318,7 @@ with st.sidebar:
 
     st.subheader("Quick Queries")
 
-    # Buttons with labels (simplified approach without custom icons in button)
+    # Standard buttons with custom styling from CSS
     if st.button("Wallet Distribution", key="wallet_dist", use_container_width=True):
         response = get_conversational_response('wallet')
         st.session_state.messages.append({"role": "user", "content": "Show wallet distribution"})
@@ -393,33 +383,9 @@ with st.sidebar:
     st.markdown("---")
     st.caption("This assistant analyzes your cryptocurrency portfolio and generates visualizations.")
 
-# Load bot and user icons for avatars
-bot_icon_url = "https://cdn-icons-png.flaticon.com/512/8649/8649595.png"
-user_icon_url = "https://cdn-icons-png.flaticon.com/512/1077/1077114.png"
-
-bot_icon = load_image(bot_icon_url)
-user_icon = load_image(user_icon_url)
-
-# Function to convert image to base64 for HTML
-def img_to_base64(img):
-    if img is None:
-        return None
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
-
-# Display chat history with custom avatars
+# Display chat history with standard avatars
 for msg in st.session_state.messages:
-    if msg["role"] == "assistant" and bot_icon:
-        icon_base64 = img_to_base64(bot_icon)
-        avatar_html = f'<img src="data:image/png;base64,{icon_base64}" class="chat-avatar">'
-    elif msg["role"] == "user" and user_icon:
-        icon_base64 = img_to_base64(user_icon)
-        avatar_html = f'<img src="data:image/png;base64,{icon_base64}" class="chat-avatar">'
-    else:
-        avatar_html = None
-
-    with st.chat_message(msg["role"], avatar=avatar_html if avatar_html else msg["role"]):
+    with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
 # Visualization area (if activated)
