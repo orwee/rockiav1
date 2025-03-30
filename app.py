@@ -139,11 +139,15 @@ df['category'] = df['token'].apply(classify_token)
 @st.cache_resource
 def setup_agent(_df):
     try:
-        api_key = st.secrets["openai"]["api_key"]
+        # Intentar primero leer de secrets.toml
+        api_key = st.secrets.get("openai", {}).get("api_key", None)
     except:
-        api_key = st.session_state.get('openai_api_key', None)
+        # Si no está en secrets, leer de variables de entorno
+        import os
+        api_key = os.environ.get("OPENAI_API_KEY", None)
 
     if not api_key:
+        st.warning("No se encontró API key de OpenAI. La funcionalidad del asistente inteligente será limitada.")
         return None
 
     try:
@@ -160,7 +164,7 @@ def setup_agent(_df):
     except Exception as e:
         st.error(f"Error al configurar el agente: {e}")
         return None
-
+        
 # Crear agente
 agent = setup_agent(df)
 
@@ -171,16 +175,7 @@ st.title("💬 Asistente de Portafolio Cripto")
 with st.sidebar:
     st.header("⚙️ Configuración")
 
-    # API key
-    api_key_input = st.text_input(
-        "OpenAI API Key",
-        type="password",
-        placeholder="sk-..."
-    )
-
-    if api_key_input:
-        st.session_state.openai_api_key = api_key_input
-        agent = setup_agent(df)
+    
 
     st.subheader("Consultas Rápidas")
 
