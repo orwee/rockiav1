@@ -19,7 +19,7 @@ SECONDARY_COLOR = "#403680"
 BG_COLOR = "#000000"#"#2B314E"
 ACCENT_COLOR = "#A199DA"
 LOGO_URL = "https://corp.orwee.io/wp-content/uploads/2023/07/cropped-imageonline-co-transparentimage-23-e1689783905238.webp"
-
+LOGO_USER = "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png"
 # Función para cargar imágenes desde URL
 @st.cache_data
 def load_image(url):
@@ -39,10 +39,18 @@ def load_avatar_image(url):
     except Exception as e:
         st.error(f"Error loading avatar image: {e}")
         return None
-
+        
+def load_user_image(url):
+    try:
+        response = requests.get(url)
+        img = Image.open(BytesIO(response.content))
+        return img
+    except Exception as e:
+        st.error(f"Error loading user image: {e}")
+        return None
 # Cargar avatares
 assistant_avatar = load_avatar_image(LOGO_URL)
-user_avatar = None  
+user_avatar = load_user_image(LOGO_USER)
 
 # Create custom sequential color palette for charts
 def create_custom_cmap():
