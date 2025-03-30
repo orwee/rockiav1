@@ -92,13 +92,15 @@ def apply_custom_branding():
         /* Add your logo */
         .logo-container {{
             display: flex;
+            flex-direction: column;
             align-items: center;
             margin-bottom: 20px;
+            text-align: center;
         }}
 
         .logo-container img {{
-            height: 50px;
-            margin-right: 10px;
+            width: 80%;
+            margin-bottom: 15px;
         }}
 
         .app-title {{
@@ -128,7 +130,7 @@ def apply_custom_branding():
     """
     st.markdown(css, unsafe_allow_html=True)
         # Main content area
-    st.title("DeFi Portfolio Intelligence")
+    #st.title("DeFi Portfolio Intelligence")
     
 
 # Page configuration
@@ -331,9 +333,8 @@ with st.sidebar:
     )
     
     st.markdown("---")  # Separador después del logo
-    st.header("Configuration")
 
-    st.subheader("Quick Queries")
+    st.subheader("Key Insights")
 
     # Standard buttons with custom styling from CSS
     if st.button("Wallet Distribution", key="wallet_dist", use_container_width=True):
