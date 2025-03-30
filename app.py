@@ -35,24 +35,24 @@ if 'show_visualization' not in st.session_state:
 def get_conversational_response(query_type):
     responses = {
         'wallet': [
-            "¡Claro! Aquí tienes la distribución de tus fondos por wallet. Veo que tienes algunos wallets con bastante concentración 👀",
+            "Aquí tienes la distribución de tus fondos por wallet. Se observa una interesante concentración en algunos wallets:",
             "Analizando tus wallets... Esto es interesante. Te muestro cómo están distribuidos tus fondos entre diferentes wallets:",
-            "He revisado tus datos y aquí te presento la distribución por wallet. ¿Habías considerado balancear un poco más tu exposición?"
+            "He revisado tus datos y aquí te presento la distribución por wallet. Hay patrones claros de concentración."
         ],
         'chain': [
             "He analizado tu exposición a diferentes blockchains. Aquí tienes el detalle de cómo están distribuidos tus fondos:",
-            "¡Diversificación blockchain! Veamos en qué cadenas tienes invertido actualmente. Esto te ayudará a evaluar tu exposición a riesgos específicos de cada red:",
-            "Aquí está el análisis por blockchain. Es interesante ver cómo tienes distribuidas tus inversiones entre diferentes ecosistemas:"
+            "Análisis de diversificación blockchain: Estos datos muestran en qué cadenas tienes invertido actualmente y cómo se distribuye el valor:",
+            "Aquí está el análisis por blockchain. Es interesante ver la distribución entre diferentes ecosistemas:"
         ],
         'category': [
-            "He categorizado tus tokens y aquí tienes la distribución. Esto te da una idea de tu balance entre stablecoins, bluechips y altcoins:",
-            "Veamos la distribución por categoría de tokens... Esto es interesante. Fíjate en el balance entre activos de bajo y alto riesgo:",
-            "Aquí tienes el análisis por categoría. Es importante mantener un equilibrio según tu estrategia de inversión y tolerancia al riesgo:"
+            "He categorizado tus tokens y aquí tienes la distribución. Esto muestra tu balance entre stablecoins, bluechips y altcoins:",
+            "Veamos la distribución por categoría de tokens... Esto es interesante. La proporción entre activos de diferente naturaleza es notable:",
+            "Aquí tienes el análisis por categoría. La distribución refleja ciertos patrones de inversión:"
         ],
         'dashboard': [
-            "¡Preparando un análisis completo! Aquí tienes un dashboard con las principales métricas y visualizaciones de tu portafolio:",
-            "Un panorama general siempre es útil. He generado este dashboard con diferentes perspectivas de tu portafolio para que puedas analizar todo de un vistazo:",
-            "Excelente elección. Te presento un resumen completo de tu portafolio con diferentes visualizaciones que te ayudarán a entender mejor tu posición actual:"
+            "Aquí tienes un dashboard con las principales métricas y visualizaciones de tu portafolio:",
+            "Un panorama general siempre es útil. He generado este dashboard con diferentes perspectivas de tu portafolio para visualizar las distribuciones:",
+            "Presentando un resumen completo de tu portafolio con diferentes visualizaciones para entender mejor la posición actual:"
         ],
         'total': [
             "He calculado el valor total de tu portafolio. Actualmente tienes invertido:",
@@ -295,7 +295,7 @@ if st.session_state.show_visualization['show']:
             })
             st.dataframe(data_df, hide_index=True)
 
-            # Añadir resumen narrativo
+            # Añadir resumen descriptivo
             st.subheader("Resumen del Análisis")
 
             # Preparar información para el resumen
@@ -303,15 +303,19 @@ if st.session_state.show_visualization['show']:
             top_value = grouped_data.max()
             top_percent = (top_value/total*100).round(2)
 
+            # Calcular índice de concentración (Herfindahl-Hirschman simplificado)
+            hhi = ((grouped_data / total) ** 2).sum() * 100
+
             # Texto con formato
             st.markdown(f"""
-            Analizando tu distribución por **{group_by}**, observo que:
+            ### Análisis de distribución por {group_by}
 
-            - Tu portafolio tiene un valor total de **${total:.2f}**
-            - La mayor concentración está en **{top_item}** con **${top_value:.2f}** (**{top_percent}%** del total)
-            - Tienes exposición a **{len(grouped_data)}** {group_by}s diferentes
-
-            Esta visualización te permite evaluar tu nivel de diversificación y concentración de riesgo por {group_by}.
+            - **Valor total:** ${total:.2f} USD
+            - **Número de {group_by}s:** {len(grouped_data)}
+            - **Mayor concentración:** {top_item} con ${top_value:.2f} ({top_percent}% del total)
+            - **Valor promedio por {group_by}:** ${(total/len(grouped_data)).round(2)} USD
+            - **Índice de concentración:** {hhi:.1f}/100 (valores más altos indican mayor concentración)
+            - **Distribución porcentual:** {', '.join([f"**{idx}:** {(val/total*100).round(1)}%" for idx, val in grouped_data.items()])}
             """)
 
         elif viz_type == 'dashboard':
@@ -371,8 +375,8 @@ if st.session_state.show_visualization['show']:
                 ax.set_ylabel("USD")
                 st.pyplot(fig)
 
-            # Añadir resumen narrativo para el dashboard
-            st.subheader("Resumen General del Portafolio")
+            # Añadir resumen descriptivo para el dashboard
+            st.subheader("Resumen del Portafolio")
 
             # Calcular datos para el resumen
             top_wallet = wallet_data.idxmax()
@@ -387,22 +391,35 @@ if st.session_state.show_visualization['show']:
             top_category_value = cat_data.max()
             top_category_percent = (top_category_value/total_value*100).round(2)
 
-            # Crear resumen narrativo
-            st.markdown(f"""
-            ### Análisis de Portafolio
+            # Calcular índices de concentración
+            wallet_hhi = ((wallet_data / total_value) ** 2).sum() * 100
+            chain_hhi = ((chain_data / total_value) ** 2).sum() * 100
+            category_hhi = ((cat_data / total_value) ** 2).sum() * 100
 
-            Tu portafolio tiene un valor total de **${total_value:.2f}** distribuido entre **{len(df)}** posiciones en **{unique_chains}** blockchains diferentes.
+            # Calcular métricas de diversificación
+            coef_var = (df['usd'].std() / df['usd'].mean() * 100).round(1)  # Coeficiente de variación
+            positions_per_chain = (len(df) / unique_chains).round(1)
+
+            # Crear resumen descriptivo
+            st.markdown(f"""
+            ### Estadísticas del Portafolio
+
+            El portafolio tiene un valor total de **${total_value:.2f}** distribuido en **{len(df)}** posiciones a través de **{unique_chains}** blockchains diferentes.
 
             #### Distribución Principal:
-            - **Wallet**: La mayoría de tus fondos (**{top_wallet_percent}%**) están en **{top_wallet}** con un valor de **${top_wallet_value:.2f}**
-            - **Blockchain**: Tu mayor exposición es a **{top_chain}** con **${top_chain_value:.2f}** (**{top_chain_percent}%** del total)
-            - **Categoría**: Tienes mayor concentración en tokens de tipo **{top_category}** con **${top_category_value:.2f}** (**{top_category_percent}%**)
+            - **Wallet**: Mayor concentración en **{top_wallet}** con **${top_wallet_value:.2f}** (**{top_wallet_percent}%** del total)
+            - **Blockchain**: Predominio de **{top_chain}** con **${top_chain_value:.2f}** (**{top_chain_percent}%** del total)
+            - **Categoría**: Mayor presencia de **{top_category}** con **${top_category_value:.2f}** (**{top_category_percent}%**)
 
-            La diversificación actual de tu portafolio muestra una tendencia hacia {
-            "una alta concentración" if top_wallet_percent > 70 else
-            "una diversificación moderada" if top_wallet_percent > 40 else
-            "una buena diversificación"
-            } de fondos.
+            #### Métricas de Diversificación:
+            - **Índice de concentración por wallet**: **{wallet_hhi:.1f}**/100
+            - **Índice de concentración por blockchain**: **{chain_hhi:.1f}**/100
+            - **Índice de concentración por categoría**: **{category_hhi:.1f}**/100
+            - **Coeficiente de variación**: **{coef_var}%** (dispersión de valores)
+            - **Posiciones por blockchain**: **{positions_per_chain}** (promedio)
+
+            #### Distribución por Blockchain:
+            {', '.join([f"**{chain}**: **{(value/total_value*100).round(1)}%**" for chain, value in chain_data.items()])}
             """)
 
         elif viz_type == 'positions':
@@ -502,51 +519,94 @@ if st.session_state.show_visualization['show']:
                 total_portfolio = df['usd'].sum()
                 filtered_percent = (filtered_total / total_portfolio) * 100
 
-                st.subheader("Resumen de Selección")
+                st.subheader("Métricas de la Selección")
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Posiciones Seleccionadas", f"{len(df_display)}")
+                    st.metric("Posiciones", f"{len(df_display)}")
                 with col2:
-                    st.metric("Valor Seleccionado", f"${filtered_total:.2f}")
+                    st.metric("Valor Total", f"${filtered_total:.2f}")
                 with col3:
-                    st.metric("% del Portfolio Total", f"{filtered_percent:.1f}%")
+                    st.metric("% del Portfolio", f"{filtered_percent:.1f}%")
                 with col4:
                     if len(df_display) > 0:
-                        st.metric("Promedio por Posición", f"${df_display['USD'].mean():.2f}")
+                        st.metric("Promedio", f"${df_display['USD'].mean():.2f}")
 
-                # Añadir resumen narrativo para las posiciones filtradas
-                st.subheader("Análisis de Posiciones")
+                # Añadir resumen descriptivo para las posiciones filtradas
+                st.subheader("Análisis de la Selección")
 
                 # Calcular información para el resumen
                 top_position = df_display.loc[df_display['USD'].idxmax()]
                 bottom_position = df_display.loc[df_display['USD'].idxmin()]
 
-                # Calcular estadísticas sobre las blockchains y wallets en la selección
+                # Calcular estadísticas y agregaciones
                 chain_counts = df_display['Blockchain'].value_counts()
                 top_chain = chain_counts.index[0] if len(chain_counts) > 0 else "ninguna"
+                chain_diversity = len(chain_counts)
 
                 wallet_distribution = df_display.groupby('Wallet')['USD'].sum()
                 top_wallet = wallet_distribution.idxmax() if not wallet_distribution.empty else "ninguna"
                 top_wallet_value = wallet_distribution.max() if not wallet_distribution.empty else 0
                 top_wallet_percent = (top_wallet_value/filtered_total*100).round(2) if filtered_total > 0 else 0
 
-                # Crear resumen narrativo con datos importantes en negrita
+                # Calcular estadísticas descriptivas
+                value_range = df_display['USD'].max() - df_display['USD'].min()
+                std_dev = df_display['USD'].std()
+                median_value = df_display['USD'].median()
+                cv = (std_dev / df_display['USD'].mean() * 100).round(1) if df_display['USD'].mean() > 0 else 0
+
+                # Calcular índice de concentración
+                wallet_hhi = ((wallet_distribution / filtered_total) ** 2).sum() * 100 if not df_display.empty and filtered_total > 0 else 0
+
+                # Crear resumen descriptivo con datos importantes en negrita
                 st.markdown(f"""
-                En tu selección actual de **{len(df_display)} posiciones** con un valor total de **${filtered_total:.2f}**, observo que:
+                ### Estadísticas de la Selección
 
-                - Tu posición más grande es **{top_position['Token']}** en **{top_position['Protocolo']}** en la blockchain **{top_position['Blockchain']}** con un valor de **${top_position['USD']:.2f}**
-                - La posición más pequeña es **{bottom_position['Token']}** con **${bottom_position['USD']:.2f}**
-                - La blockchain más utilizada en esta selección es **{top_chain}**
-                - La wallet con mayor concentración es **{top_wallet}** con **${top_wallet_value:.2f}** (**{top_wallet_percent}%** de la selección)
+                En esta selección de **{len(df_display)} posiciones** con valor total de **${filtered_total:.2f}**:
 
-                Esta selección representa el **{filtered_percent:.1f}%** de tu portafolio total.
+                #### Distribución de Valor:
+                - **Posición máxima:** ${top_position['USD']:.2f} ({top_position['Token']} en {top_position['Protocolo']})
+                - **Posición mínima:** ${bottom_position['USD']:.2f} ({bottom_position['Token']})
+                - **Valor mediano:** ${median_value:.2f}
+                - **Desviación estándar:** ${std_dev:.2f}
+                - **Coeficiente de variación:** {cv}%
+                - **Rango de valores:** ${value_range:.2f}
+
+                #### Concentración y Diversificación:
+                - **Índice de concentración por wallet:** {wallet_hhi:.1f}/100
+                - **Blockchains representadas:** {chain_diversity} cadenas
+                - **Principal blockchain:** {top_chain} ({chain_counts[top_chain]} posiciones)
+                - **Principal wallet:** {top_wallet} (${top_wallet_value:.2f}, {top_wallet_percent}% del total seleccionado)
+
+                Esta selección representa el **{filtered_percent:.1f}%** del valor total del portafolio.
                 """)
 
-                # Añadir recomendación basada en los datos
-                if filtered_percent > 80:
-                    st.info("📈 Esta selección contiene la mayor parte de tu portafolio. Considera diversificar más para reducir el riesgo.")
-                elif len(df_display) == 1:
-                    st.info("🔍 Estás analizando una única posición. Para un análisis comparativo, ajusta los filtros para incluir más posiciones.")
+                # Añadir datos adicionales si hay suficientes posiciones
+                if len(df_display) > 1:
+                    # Agregaciones adicionales
+                    protocol_counts = df_display['Protocolo'].value_counts()
+                    top_protocol = protocol_counts.index[0] if not protocol_counts.empty else "ninguno"
+                    category_distribution = df_display.groupby('Categoría')['USD'].sum()
+                    category_percents = ((category_distribution / filtered_total) * 100).round(1)
+
+                    # Mostrar datos adicionales de forma neutral
+                    st.markdown("### Agregaciones Adicionales")
+                    st.markdown(f"""
+                    #### Distribución por Categoría:
+                    {', '.join([f"**{cat}:** **{val}%**" for cat, val in category_percents.items()])}
+
+                    #### Distribución por Protocolo:
+                    - **Protocolos utilizados:** {len(protocol_counts)}
+                    - **Principal protocolo:** {top_protocol} ({protocol_counts[top_protocol]} posiciones)
+
+                    #### Distribución Estadística:
+                    - **Media vs. Mediana:** La media (${df_display['USD'].mean():.2f}) es {
+                        "mayor que" if df_display['USD'].mean() > median_value else
+                        "menor que" if df_display['USD'].mean() < median_value else
+                        "igual a"} la mediana (${median_value:.2f}), lo que indica una distribución {
+                        "con sesgo hacia valores altos" if df_display['USD'].mean() > median_value else
+                        "con sesgo hacia valores bajos" if df_display['USD'].mean() < median_value else
+                        "simétrica"}
+                    """)
 
 # Entrada de usuario
 prompt = st.chat_input("Escribe tu consulta...")
