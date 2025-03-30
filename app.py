@@ -399,8 +399,6 @@ with st.sidebar:
             'group_by': None
         }
 
-    st.markdown("---")
-    st.caption("This assistant analyzes your cryptocurrency portfolio and generates visualizations.")
 
 # Display chat history with standard avatars
 # Luego, en la parte donde muestras los mensajes:
