@@ -430,6 +430,26 @@ with st.sidebar:
             'group_by': None
         }
 
+    if 'conversation_logs' in st.session_state and st.session_state.conversation_logs:
+        # Convertir logs a DataFrame
+        logs_df = pd.DataFrame(st.session_state.conversation_logs)
+
+        # Botón para descargar logs
+        csv_data = logs_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Descargar logs",
+            data=csv_data,
+            file_name=f"rocky_logs_{datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+
+        # Opción para ver logs
+        if st.checkbox("Ver logs de esta sesión"):
+            st.dataframe(
+                logs_df[['timestamp', 'user_message']],
+                use_container_width=True
+            )
+
 
 # Display chat history with standard avatars
 # Luego, en la parte donde muestras los mensajes:
