@@ -57,31 +57,25 @@ user_avatar = load_user_image(LOGO_USER)
 def create_custom_cmap():
     return mpl.colors.LinearSegmentedColormap.from_list("Rocky", [PRIMARY_COLOR, SECONDARY_COLOR])
 
-# Función para guardar los logs de conversación
+# Función para guardar los logs de conversación en session_state
 def save_conversation_log(user_message, assistant_response, visualization_type=None):
     """
-    Guarda los mensajes de la conversación en un archivo CSV
+    Guarda los mensajes de la conversación en session_state y proporciona descarga
     """
-    # Crear directorio logs si no existe
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
+    # Inicializar el registro de conversaciones si no existe
+    if 'conversation_logs' not in st.session_state:
+        st.session_state.conversation_logs = []
 
-    # Nombre del archivo basado en la fecha actual
-    log_file = f"logs/conversation_log_{datetime.datetime.now().strftime('%Y-%m-%d')}.csv"
-
-    # Preparar datos para el log
-    log_data = {
+    # Añadir la nueva entrada de log
+    log_entry = {
         'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'user_message': user_message,
         'assistant_response': assistant_response,
         'visualization_type': visualization_type if visualization_type else 'none'
     }
 
-    # Crear o añadir al archivo CSV
-    if not os.path.exists(log_file):
-        pd.DataFrame([log_data]).to_csv(log_file, index=False)
-    else:
-        pd.DataFrame([log_data]).to_csv(log_file, mode='a', header=False, index=False)
+    # Guardar en session_state
+    st.session_state.conversation_logs.append(log_entry)
 
     return True
     
