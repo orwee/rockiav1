@@ -56,6 +56,34 @@ user_avatar = load_user_image(LOGO_USER)
 def create_custom_cmap():
     return mpl.colors.LinearSegmentedColormap.from_list("Rocky", [PRIMARY_COLOR, SECONDARY_COLOR])
 
+# Función para guardar los logs de conversación
+def save_conversation_log(user_message, assistant_response, visualization_type=None):
+    """
+    Guarda los mensajes de la conversación en un archivo CSV
+    """
+    # Crear directorio logs si no existe
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+
+    # Nombre del archivo basado en la fecha actual
+    log_file = f"logs/conversation_log_{datetime.datetime.now().strftime('%Y-%m-%d')}.csv"
+
+    # Preparar datos para el log
+    log_data = {
+        'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'user_message': user_message,
+        'assistant_response': assistant_response,
+        'visualization_type': visualization_type if visualization_type else 'none'
+    }
+
+    # Crear o añadir al archivo CSV
+    if not os.path.exists(log_file):
+        pd.DataFrame([log_data]).to_csv(log_file, index=False)
+    else:
+        pd.DataFrame([log_data]).to_csv(log_file, mode='a', header=False, index=False)
+
+    return True
+    
 # Apply custom branding
 def apply_custom_branding():
     # Custom CSS with Rocky branding
@@ -849,7 +877,7 @@ prompt = st.chat_input("Type your query...")
 if prompt:
     # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
-
+    
     # Function to detect query intent (supporting both English and Spanish)
     def detect_query_intent(query_text):
         query_lower = query_text.lower()
@@ -914,8 +942,12 @@ if prompt:
             'group_by': None
         }
 
-    # Add assistant response
+    # Add assistant response to session state
     st.session_state.messages.append({"role": "assistant", "content": asst_response})
-
+    
+    # Guardar conversación en el log
+    viz_type = st.session_state.show_visualization.get('type', None)
+    save_conversation_log(prompt, asst_response, viz_type)
+    
     # Reload to show the complete response
     st.rerun()
