@@ -12,6 +12,7 @@ import matplotlib as mpl
 from PIL import Image
 from io import BytesIO
 import requests
+import datetime
 
 # Custom color palette
 PRIMARY_COLOR = "#A199DA"
